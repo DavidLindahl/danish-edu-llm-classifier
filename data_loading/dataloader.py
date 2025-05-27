@@ -3,10 +3,10 @@ from datatrove.pipeline.readers import ParquetReader
 from tqdm import tqdm
 import os
 
-def dataloader(samples=100, to_csv = False):
+def dataloader(samples=100, to_csv=False, csv_filename="output.csv"):
     """"""
 # Initialize the ParquetReader
-    data_reader = ParquetReader("hf://datasets/HuggingFaceFW/fineweb-2/data/dan_Latn/train", limit=samples)
+    data_reader = ParquetReader("hf://datasets/HuggingFaceFW/fineweb-2/data/dan_Latn/train", limit=samples , shuffle_files=True)
 
 # List to store extracted data
     data_list = []
@@ -27,9 +27,9 @@ def dataloader(samples=100, to_csv = False):
     # Save to CSV file
     if to_csv:
         os.makedirs("data", exist_ok=True)
-        df.to_csv("data/output.csv", index=False, encoding="utf-8")
-        print("CSV file saved as output.csv")
+        csv_path = os.path.join("data", csv_filename)
+        df.to_csv(csv_path, index=False, encoding="utf-8")
+        print(f"CSV file saved as {csv_path}")
 
     return df
 
-dataloader(samples=100)
