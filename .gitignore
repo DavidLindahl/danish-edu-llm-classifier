@@ -2,3 +2,5 @@
 data/
 # Ignore Python cache files
 __pycache__/
+test_length_df.ipynb
+.DS_Store

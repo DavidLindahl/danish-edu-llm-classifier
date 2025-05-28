@@ -16,7 +16,7 @@ def main():
     
     # Training data configuration
     BATCH_SIZE = 250
-    NUM_BATCHES = 4
+    NUM_BATCHES = 5
     TOTAL_SAMPLES = BATCH_SIZE * NUM_BATCHES
     
     print(f"Generating training data in {NUM_BATCHES} batches of {BATCH_SIZE} samples each...")
