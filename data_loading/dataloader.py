@@ -33,3 +33,7 @@ def dataloader(samples=100, to_csv=False, csv_filename="output.csv"):
 
     return df
 
+if __name__ == "__main__":
+    df = dataloader(samples=100, to_csv=True, csv_filename="training_data.csv")
+    print("Data loading complete.")
+    print(df.head())
