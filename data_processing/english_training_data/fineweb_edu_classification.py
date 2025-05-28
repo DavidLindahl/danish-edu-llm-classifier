@@ -28,5 +28,8 @@ for example in tqdm(raw_dataset):
 raw_dataset = raw_dataset.add_column("score", scores)
 
 # Save to disk (optional)
-raw_dataset.to_csv("fineweb_with_scores.csv")
-print("Done! Saved as fineweb_with_scores.csv")
+import os
+
+os.makedirs("data", exist_ok=True)
+raw_dataset.to_csv("data/fineweb_with_scores.csv")
+print("Done! Saved as data/fineweb_with_scores.csv")

@@ -8,7 +8,7 @@ HF_DATASET_SCORE_3_NAME = "HuggingFaceFW/fineweb-edu"
 HF_CONFIG_SCORE_3 = "CC-MAIN-2024-22"
 HF_DATASET_SCORE_2_NAME = "HuggingFaceFW/fineweb-edu-score-2"
 HF_CONFIG_SCORE_2 = "CC-MAIN-2024-18"
-CSV_FILE_PATH = "training_english_data/fineweb_train_classifier.csv"
+CSV_FILE_PATH = "data/fineweb_train_classifier.csv"
 COMMON_COLUMNS = ["text", "language_score", "token_count", "score"]
 
 
@@ -149,8 +149,11 @@ def save_merged_df_to_csv(df, filename="merged_fineweb_samples.csv"):
         df (pd.DataFrame): The DataFrame to save.
         filename (str): The name of the output CSV file. Defaults to "merged_fineweb_samples.csv".
     """
-    df.to_csv(filename, index=False)
-    print(f"Merged DataFrame saved to {filename}")
+    # Ensure output directory exists
+    os.makedirs("data", exist_ok=True)
+    output_path = os.path.join("data", os.path.basename(filename))
+    df.to_csv(output_path, index=False)
+    print(f"Merged DataFrame saved to {output_path}")
 
 
 if __name__ == "__main__":
@@ -165,4 +168,4 @@ if __name__ == "__main__":
     )
 
     plot_score_distribution(merged_df)
-    save_merged_df_to_csv(merged_df, "training_english_data/merged_fineweb_samples.csv")
+    save_merged_df_to_csv(merged_df, "data/merged_fineweb_samples.csv")
