@@ -11,3 +11,9 @@ per_device_eval_batch_size: 8
 weight_decay: 0.01
 evaluation_strategy: "epoch"
 save_strategy: "epoch"
+
+# Danish data selection for merging
+num_danish_samples: 500
+danish_score_min: 4
+danish_score_max: 5
+danish_random_seed: 123
