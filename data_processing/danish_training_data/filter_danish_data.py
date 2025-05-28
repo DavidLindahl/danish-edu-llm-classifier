@@ -152,8 +152,8 @@ def main():
     
     # Load data
 
-    csv_path = os.path.join("data", "training_data_combined.csv")
-    
+    csv_path = os.path.join("data", "danish_unfiltered_data.csv")
+
     if not os.path.exists(csv_path):
         print(f"Error: File {csv_path} not found!")
         return
@@ -168,7 +168,7 @@ def main():
     
     # Save results
     os.makedirs("data", exist_ok=True)
-    clean_data.to_csv("data/clean_data.csv", index=False, encoding="utf-8")
+    clean_data.to_csv("data/danish_filtered_data.csv", index=False, encoding="utf-8")
     # problematic_data.to_csv("data/problematic_data.csv", index=False, encoding="utf-8")
     
     # Print stats

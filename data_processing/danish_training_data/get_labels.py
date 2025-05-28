@@ -12,7 +12,7 @@ import json
 
 def load_api_key():
     """Load API key from file."""
-    api_key_path = os.path.join("data", "gemini_api_key.txt")
+    api_key_path = os.path.join(".venv", "gemini_api_key.txt")
     try:
         with open(api_key_path, 'r') as f:
             api_key = f.read().strip()
@@ -103,7 +103,7 @@ def main():
     """Main function to evaluate educational content from CSV file."""
     
     # Path to the combined CSV file
-    csv_path = os.path.join("data", "clean_data.csv")
+    csv_path = os.path.join("data", "danish_filtered_data.csv")
     
     # Check if file exists
     if not os.path.exists(csv_path):
@@ -178,7 +178,7 @@ def main():
                 print(f"Progress: {i+1}/{num_samples} - Average score so far: {avg_score:.2f}")
     
     # Save results as JSON
-    json_output_path = os.path.join("data", "evaluated_training_data.json")
+    json_output_path = os.path.join("data", "danish_filtered_labelled_data.json")
     with open(json_output_path, 'w', encoding='utf-8') as f:
         json.dump(all_results, f, ensure_ascii=False, indent=2)
     
