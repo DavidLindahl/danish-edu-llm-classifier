@@ -1,5 +1,7 @@
 import sys
 import os
+from sklearn.metrics import mean_squared_error
+import numpy as np
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -14,7 +16,6 @@ from transformers import (
 import torch
 from sklearn.model_selection import train_test_split
 import yaml
-import os
 from data_processing.data_process import get_merged_dataset
 
 # Load config
@@ -95,9 +96,22 @@ training_args = TrainingArguments(
     per_device_eval_batch_size=config.get("per_device_eval_batch_size", 8),
     weight_decay=config.get("weight_decay", 0.01),
     eval_strategy=config.get("evaluation_strategy", "epoch"),
+    logging_strategy=config.get("logging_strategy", "epoch"),
     save_strategy=config.get("save_strategy", "epoch"),
+    logging_first_step=True,
     logging_dir=os.path.join(results_dir, "logs"),
+    report_to="wandb",
+    run_name="danish-edu-llm-run", 
 )
+
+
+def compute_metrics(eval_pred):
+    preds, labels = eval_pred
+    preds = preds.squeeze()
+    mse = mean_squared_error(labels, preds)
+    rmse = np.sqrt(mse)
+    return {"mse": mse, "rmse": rmse}
+
 
 print("Initializing Trainer...")
 trainer = Trainer(
@@ -105,19 +119,18 @@ trainer = Trainer(
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
+    compute_metrics=compute_metrics,
 )
 
 if __name__ == "__main__":
-    print("Starting training...")
-    trainer.train()
-    print("Training complete. Saving model...")
-    # Save the trained model to the model directory
-    trainer.save_model(model_dir)
-
-    # Save training and validation metrics to CSV
-    print("Saving training/validation metrics...")
-    metrics = trainer.state.log_history
-    metrics_df = pd.DataFrame(metrics)
-    metrics_path = os.path.join(results_dir, "train_eval_metrics.csv")
-    metrics_df.to_csv(metrics_path, index=False)
-    print(f"Saved training/validation metrics to {metrics_path}")
+    # 1. Print config & splits (sanity checks)
+    # 2. Initialize tokenizer, datasets, model (with problem_type="regression")
+    # 3. Build TrainingArguments (with logging_strategy="epoch")
+    # 4. Create Trainer (with compute_metrics)
+    print("Starting training…")
+    train_result = trainer.train()
+    print("Training complete.")
+    
+    print("Evaluating on validation set…")
+    eval_metrics = trainer.evaluate()
+    print(f"Validation metrics: {eval_metrics}")
