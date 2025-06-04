@@ -31,9 +31,13 @@ results_dir = config["results_dir"]
 num_labels = config.get("num_labels", 1)
 
 num_danish_samples = config["num_danish_samples"]  # Number of Danish samples to include
-num_english_samples = config[
-    "num_english_samples"
-]  # Number of English samples to include
+num_english_samples = config["num_english_samples"]  # Number of English samples to include
+
+learning_rate = config.get("learning_rate", 2e-5)
+
+
+
+
 
 # Load data
 print(
@@ -101,7 +105,7 @@ training_args = TrainingArguments(
     logging_first_step=True,
     logging_dir=os.path.join(results_dir, "logs"),
     report_to="wandb",
-    run_name="danish-edu-llm-run", 
+    run_name="danish-edu-llm-run",
 )
 
 
@@ -130,7 +134,21 @@ if __name__ == "__main__":
     print("Starting training…")
     train_result = trainer.train()
     print("Training complete.")
-    
+
     print("Evaluating on validation set…")
     eval_metrics = trainer.evaluate()
     print(f"Validation metrics: {eval_metrics}")
+
+    # save model in the model directory
+    # save to model to the "model_dir+model_weights" directory
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    model_dir = os.path.join(model_dir, "model_weights")
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+
+    print("Saving model...")
+    trainer.save_model(model_dir)
+    print(f"Model saved to {model_dir}")
+    print("Training and evaluation complete.")
+    print("Done.")

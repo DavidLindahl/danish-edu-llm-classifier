@@ -1,35 +1,53 @@
-import pandas as pd
+# Load N samples from the streaming dataset
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from tqdm import tqdm
+import pandas as pd
 
-# Load 1k datapoints from the dataset
-raw_dataset = load_dataset("HuggingFaceFW/fineweb", split="train[:10]")
 
-# Load model and tokenizer
-model_name = "HuggingFaceTB/fineweb-edu-classifier"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSequenceClassification.from_pretrained(model_name)
-model.eval()
+N = 1000  # Number of samples to load (change as needed)
+dataset = load_dataset(
+    "HuggingFaceFW/fineweb",
+    name="CC-MAIN-2024-10",
+    split="train",
+    streaming=True
+)
 
-# Tokenize and predict
-scores = []
-for example in tqdm(raw_dataset):
-    inputs = tokenizer(
-        example["text"], truncation=True, padding=True, return_tensors="pt"
-    )
+# straming the first N samples from the dataset
+streamed_samples = []
+for idx, sample in enumerate(dataset):
+    if idx >= N:
+        break
+    streamed_samples.append(sample)
+print(f"Loaded {len(streamed_samples)} samples.")
+
+# load the tokenizer and model for classification
+tokenizer = AutoTokenizer.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
+model = AutoModelForSequenceClassification.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
+
+
+
+# Classify streamed samples and add score and int_score
+classified_samples = []
+for sample in tqdm(streamed_samples, desc="Classifying samples"):
+    text = sample.get("text", "")
+    if not text:
+        continue
+    inputs = tokenizer(text, return_tensors="pt", padding="longest", truncation=True)
     with torch.no_grad():
         outputs = model(**inputs)
-        score = outputs.logits.item()  # Assuming binary classification, take class 1
-    scores.append(score)
+    logits = outputs.logits.squeeze(-1).float().detach().numpy()
+    score = logits.item()
+    int_score = int(round(max(0, min(score, 5)))) # ensure score is between 0 and 5
+    sample["score"] = score
+    sample["int_score"] = int_score
+    classified_samples.append(sample)
 
-# Add scores to dataset
-raw_dataset = raw_dataset.add_column("score", scores)
+df = pd.DataFrame(classified_samples)
 
-# Save to disk (optional)
-import os
-
-os.makedirs("data", exist_ok=True)
-raw_dataset.to_csv("data/fineweb_with_scores.csv")
-print("Done! Saved as data/fineweb_with_scores.csv")
+# Save the classified samples to a CSV file
+import pandas as pd
+output_file = "data/english_classified_samples.csv"
+df.to_csv(output_file, index=False)
+print(f"Classified samples saved to {output_file}.")

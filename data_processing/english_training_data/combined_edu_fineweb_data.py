@@ -9,7 +9,7 @@ HF_CONFIG_SCORE_3 = "CC-MAIN-2024-22"
 HF_DATASET_SCORE_2_NAME = "HuggingFaceFW/fineweb-edu-score-2"
 HF_CONFIG_SCORE_2 = "CC-MAIN-2024-18"
 CSV_FILE_PATH = "data/fineweb_train_classifier.csv"
-COMMON_COLUMNS = ["text", "language_score", "token_count", "score"]
+COMMON_COLUMNS = ["text", "language_score", "token_count", "int_score"]
 
 
 def _load_hf_samples(

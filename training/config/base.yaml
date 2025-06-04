@@ -12,6 +12,12 @@ evaluation_strategy: "epoch"
 logging_strategy: "epoch"
 save_strategy: "epoch"
 
+<<<<<<< HEAD
+learning_rate: 2e-5
+
+=======
+>>>>>>> 8f565fd82cc3d59015ef2fe57405e66ef404e172
+
 # Danish/English data selection for merging
 num_danish_samples: 0      # Number of Danish samples to include
 num_english_samples: 20       # Number of English samples to include

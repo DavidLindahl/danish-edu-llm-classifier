@@ -3,3 +3,9 @@
 __pycache__/
 test_length_df.ipynb
 .DS_Store
+<<<<<<< HEAD
+venv/
+=======
+
+>>>>>>> 8f565fd82cc3d59015ef2fe57405e66ef404e172
+wandb/
