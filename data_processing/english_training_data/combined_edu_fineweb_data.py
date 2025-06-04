@@ -111,7 +111,7 @@ def _load_local_samples(num_samples: int) -> pd.DataFrame:
 
 
 def load_and_process_dataset(
-    num_samples_score_3: int = 1500,
+    num_samples_score_3: int = 3500,
     num_samples_score_2: int = 2500,
     num_samples_csv: int = 1000,
 ) -> pd.DataFrame:
@@ -153,8 +153,38 @@ def save_to_csv(df: pd.DataFrame, filename: str = OUTPUT_CSV_PATH) -> None:
     print(f"Saved merged dataset to {filename}")
 
 
+def limit_int_score_2_and_3(df: pd.DataFrame, N_2: int, N_3: int) -> pd.DataFrame:
+    """
+    Limit the number of samples with int_score == 2 and int_score == 3 to N_2 and N_3 respectively.
+    All other int_score classes (0, 1, 4, 5) are unchanged.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The merged dataset.
+    N_2 : int
+        Maximum number of samples to keep for int_score == 2.
+    N_3 : int
+        Maximum number of samples to keep for int_score == 3.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with limited samples for int_score 2 and 3.
+    """
+    # Split by int_score
+    df_2 = df[df["int_score"] == 2].head(N_2)
+    df_3 = df[df["int_score"] == 3].head(N_3)
+    df_rest = df[df["int_score"].isin([0, 1, 4, 5])]
+    # Concatenate and shuffle
+    result = pd.concat([df_rest, df_2, df_3], ignore_index=True)
+    return result
+
+
 if __name__ == "__main__":
     merged_df = load_and_process_dataset()
+    # Limit int_score 2 and 3 to 1000 samples each
+    merged_df = limit_int_score_2_and_3(merged_df, N_2=1000, N_3=1000)
     plot_score_distribution(merged_df)
     save_to_csv(merged_df)
 
