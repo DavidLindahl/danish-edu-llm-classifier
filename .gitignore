@@ -4,3 +4,4 @@ __pycache__/
 test_length_df.ipynb
 .DS_Store
 venv/
+wandb/
