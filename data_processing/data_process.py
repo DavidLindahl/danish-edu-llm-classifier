@@ -22,12 +22,12 @@ def get_merged_dataset(
     """
     # Load English data
     english_df = pd.read_csv(english_path)
-    if english_data_amount > 0:
+    if english_data_amount >= 0:
         english_df = english_df.sample(
             n=min(english_data_amount, len(english_df)), random_state=random_seed
         )
     # Load Danish data
-    if danish_data_amount > 0:
+    if danish_data_amount >= 0:
         with open(danish_path, "r", encoding="utf-8") as f:
             danish_data = json.load(f)
         danish_df = pd.DataFrame(danish_data)

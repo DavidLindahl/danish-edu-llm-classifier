@@ -1,5 +1,5 @@
 model_name: "FacebookAI/xlm-roberta-base"
-num_labels: 1  # Regression head
+num_labels: 5  # Classification head
 
 
 model_dir: "../models"
@@ -12,15 +12,12 @@ evaluation_strategy: "epoch"
 logging_strategy: "epoch"
 save_strategy: "epoch"
 
-<<<<<<< HEAD
 learning_rate: 2e-5
 
-=======
->>>>>>> 8f565fd82cc3d59015ef2fe57405e66ef404e172
 
 # Danish/English data selection for merging
-num_danish_samples: 0      # Number of Danish samples to include
-num_english_samples: 20       # Number of English samples to include
+num_danish_samples: 100      # Number of Danish samples to include
+num_english_samples: 0       # Number of English samples to include
 danish_score_min: 0             # Optional: minimum educational score (inclusive)
 danish_score_max: 5             # Optional: maximum educational score (inclusive)
 danish_random_seed: 42          # Optional: random seed for sampling
