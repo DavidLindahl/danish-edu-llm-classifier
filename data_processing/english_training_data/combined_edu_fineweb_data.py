@@ -134,7 +134,7 @@ def plot_score_distribution(merged_df):
 
     # Plot the distribution of scores
     plt.figure(figsize=(10, 6))
-    sns.histplot(merged_df["score"], bins=30, kde=True)
+    sns.histplot(merged_df["int_score"], bins=30, kde=True)
     plt.title("Score Distribution")
     plt.xlabel("Score")
     plt.ylabel("Frequency")
