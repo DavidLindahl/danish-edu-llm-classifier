@@ -26,10 +26,13 @@ HF_CONFIG_SCORE_3 = "CC-MAIN-2024-22"
 HF_DATASET_SCORE_2_NAME = "HuggingFaceFW/fineweb-edu-score-2"
 HF_CONFIG_SCORE_2 = "CC-MAIN-2024-18"
 
+# Base directory for data files (relative to this script)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
+
 # Path to locally classified FineWeb samples
-LOCAL_CSV_PATH = "../../data/english_classified_samples.csv"
+LOCAL_CSV_PATH = os.path.join(BASE_DIR, "english_classified_samples.csv")
 # Output path for the merged, balanced dataset
-OUTPUT_CSV_PATH = "../../data/english_fineweb_merged_data.csv"
+OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "english_fineweb_merged_data.csv")
 
 COMMON_COLUMNS = ["text", "language_score", "token_count", "int_score"]
 
@@ -107,32 +110,6 @@ def _load_local_samples(num_samples: int) -> pd.DataFrame:
     return subset
 
 
-def _balance_int_scores(df: pd.DataFrame, random_state: int = 42) -> pd.DataFrame:
-    """Balance the DataFrame so each ``int_score`` occurs equally often."""
-
-    score_counts = df["int_score"].value_counts().to_dict()
-    if not score_counts:
-        return df
-
-    target = max(score_counts.values())
-    balanced_parts: List[pd.DataFrame] = []
-    for score, group in df.groupby("int_score"):
-        if len(group) < target:
-            balanced = group.sample(
-                target, replace=True, random_state=random_state
-            )
-        else:
-            balanced = group.sample(target, random_state=random_state)
-        balanced_parts.append(balanced)
-
-    balanced_df = pd.concat(balanced_parts).sample(
-        frac=1.0, random_state=random_state
-    )
-    print("Balanced dataset distribution:")
-    print(balanced_df["int_score"].value_counts().sort_index())
-    return balanced_df.reset_index(drop=True)
-
-
 def load_and_process_dataset(
     num_samples_score_3: int = 1500,
     num_samples_score_2: int = 2500,
@@ -150,18 +127,20 @@ def load_and_process_dataset(
 
     merged = pd.concat([df_local, df_score_2, df_score_3], ignore_index=True)
     print(f"Merged dataset contains {len(merged)} samples")
-
-    return _balance_int_scores(merged)
+    return merged
 
 
 def plot_score_distribution(df: pd.DataFrame) -> None:
     """Plot a histogram of ``int_score`` values."""
 
     plt.figure(figsize=(8, 5))
-    sns.histplot(df["int_score"], bins=range(0, 7), discrete=True)
+    # Count occurrences for each int_score 0-5
+    value_counts = df['int_score'].value_counts().reindex(range(0, 6), fill_value=0)
+    sns.barplot(x=value_counts.index, y=value_counts.values, palette="viridis")
     plt.xlabel("int_score")
     plt.ylabel("count")
-    plt.title("Distribution of int_score")
+    plt.title("Distribution of int_score (0-5)")
+    plt.xticks(range(0, 6))
     plt.tight_layout()
     plt.show()
 
@@ -178,4 +157,6 @@ if __name__ == "__main__":
     merged_df = load_and_process_dataset()
     plot_score_distribution(merged_df)
     save_to_csv(merged_df)
+
+
 
