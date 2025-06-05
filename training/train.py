@@ -1,7 +1,11 @@
+"""Training script for the Danish educational score model."""
+
 import sys
 import os
-from sklearn.metrics import mean_squared_error
+
 import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix
+import evaluate
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -11,10 +15,11 @@ from transformers import (
     AutoModelForSequenceClassification,
     TrainingArguments,
     Trainer,
+    DataCollatorWithPadding,
 )
 
-import torch
-from sklearn.model_selection import train_test_split
+from datasets import Dataset, ClassLabel
+
 import yaml
 from data_processing.data_process import get_merged_dataset
 
@@ -49,48 +54,38 @@ df = get_merged_dataset(
 )
 print(f"Loaded dataset with {len(df)} samples.")
 
-# Assume columns: text, score
-texts = df["text"].astype(str).tolist()
-labels = df["score"].astype(float).tolist()
-
-# Split train/eval
-print(f"Splitting data into train and validation sets (val_split={val_split})...")
-train_texts, val_texts, train_labels, val_labels = train_test_split(
-    texts, labels, test_size=val_split, random_state=42
+# Convert to Hugging Face dataset
+dataset = Dataset.from_pandas(df[["text", "score"]])
+dataset = dataset.map(
+    lambda x: {"score": int(np.clip(round(float(x["score"])), 0, 5))}
+)
+dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(6)]))
+dataset = dataset.train_test_split(
+    train_size=1 - val_split, seed=42, stratify_by_column="score"
 )
 
 print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 
-def tokenize(batch):
-    return tokenizer(batch, truncation=True, padding="max_length", max_length=500)
+def preprocess(examples):
+    batch = tokenizer(examples["text"], truncation=True)
+    batch["labels"] = np.array(examples["score"], dtype=np.float32)
+    return batch
 
+dataset = dataset.map(preprocess, batched=True)
+data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-class EnglishDataset(torch.utils.data.Dataset):
-    def __init__(self, texts, labels):
-        self.encodings = tokenizer(
-            texts, truncation=True, padding="max_length", max_length=500
-        )
-        self.labels = labels
-
-    def __getitem__(self, idx):
-        item = {k: torch.tensor(v[idx]) for k, v in self.encodings.items()}
-        item["labels"] = torch.tensor(self.labels[idx], dtype=torch.float)
-        return item
-
-    def __len__(self):
-        return len(self.labels)
-
-
-print("Preparing datasets...")
-train_dataset = EnglishDataset(train_texts, train_labels)
-val_dataset = EnglishDataset(val_texts, val_labels)
+train_dataset = dataset["train"]
+val_dataset = dataset["test"]
 
 print("Loading model...")
 model = AutoModelForSequenceClassification.from_pretrained(
     model_name, num_labels=num_labels, problem_type="regression"
 )
+
+for param in model.base_model.parameters():
+    param.requires_grad = False
 
 print("Setting up training arguments...")
 training_args = TrainingArguments(
@@ -98,6 +93,7 @@ training_args = TrainingArguments(
     num_train_epochs=config.get("num_train_epochs", 3),
     per_device_train_batch_size=config.get("per_device_train_batch_size", 8),
     per_device_eval_batch_size=config.get("per_device_eval_batch_size", 8),
+    learning_rate=learning_rate,
     weight_decay=config.get("weight_decay", 0.01),
     eval_strategy=config.get("evaluation_strategy", "epoch"),
     logging_strategy=config.get("logging_strategy", "epoch"),
@@ -110,11 +106,41 @@ training_args = TrainingArguments(
 
 
 def compute_metrics(eval_pred):
-    preds, labels = eval_pred
-    preds = preds.squeeze()
-    mse = mean_squared_error(labels, preds)
-    rmse = np.sqrt(mse)
-    return {"mse": mse, "rmse": rmse}
+    """Compute precision, recall, F1 and accuracy."""
+
+    logits, labels = eval_pred
+    preds = np.round(logits.squeeze()).clip(0, 5).astype(int)
+    labels = np.round(labels.squeeze()).astype(int)
+
+    precision_metric = evaluate.load("precision")
+    recall_metric = evaluate.load("recall")
+    f1_metric = evaluate.load("f1")
+    accuracy_metric = evaluate.load("accuracy")
+
+    precision = precision_metric.compute(
+        predictions=preds, references=labels, average="macro"
+    )["precision"]
+    recall = recall_metric.compute(
+        predictions=preds, references=labels, average="macro"
+    )["recall"]
+    f1 = f1_metric.compute(predictions=preds, references=labels, average="macro")[
+        "f1"
+    ]
+    accuracy = accuracy_metric.compute(predictions=preds, references=labels)[
+        "accuracy"
+    ]
+
+    report = classification_report(labels, preds)
+    cm = confusion_matrix(labels, preds)
+    print("Validation Report:\n" + report)
+    print("Confusion Matrix:\n" + str(cm))
+
+    return {
+        "precision": precision,
+        "recall": recall,
+        "f1_macro": f1,
+        "accuracy": accuracy,
+    }
 
 
 print("Initializing Trainer...")
