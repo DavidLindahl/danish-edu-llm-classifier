@@ -61,4 +61,34 @@ This folder contains all datasets used for training and evaluating the education
 
 - All files are in CSV or JSON format for easy loading and processing.
 - Filtered datasets are recommended for training, while unfiltered/raw datasets can be used for further data cleaning or analysis.
-- For details on how the datasets are processed and labeled, see the scripts in the `data_processing/`
+- For details on how the datasets are processed and labeled, see the scripts in the `data_processing/` directory.
+
+## Data Processing
+
+The `data_processing/` folder contains utilities for preparing training data. Key components include:
+
+- **data_process.py** – utility functions for merging English and Danish datasets.
+- **danish_training_data/** – scripts for downloading Danish samples from FineWeb (`get_danish_data.py`), filtering out spam or inappropriate content (`filter_danish_data.py`), and scoring each example using Gemini (`get_labels.py`).
+- **english_training_data/** – code for classifying English FineWeb samples (`fineweb_edu_classification.py`) and merging them with additional datasets (`combined_edu_fineweb_data.py`).
+
+## Training
+
+Training scripts live in the `training/` directory. `train.py` loads the merged dataset, splits it into train/validation sets and fine‑tunes a transformer model for regression. Configuration files under `training/config/` specify parameters such as model name and number of samples to use. The empty `evaluate.py` is a placeholder for future evaluation utilities, while `utils.py` provides helper functions like `set_seed`.
+
+## Self Annotation
+
+The `self_annotation/` folder contains notebooks and a small Streamlit tool (`annotation.py`) used to manually label data and measure annotator agreement. These files are intended for exploratory analysis and are not required for basic training runs.
+
+## Archive
+
+Deprecated experiments are stored in the `archive/` directory. They are kept for reference only and are not maintained.
+
+## Requirements and Setup
+
+Install dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
+After installing, you can launch a training run with `python training/train.py` (edit the YAML files under `training/config/` as needed).

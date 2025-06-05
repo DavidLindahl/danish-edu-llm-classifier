@@ -1,171 +1,192 @@
-import pandas as pd
-from datasets import load_dataset
-import matplotlib.pyplot as plt
-import seaborn as sns
+"""Merge and balance English educational datasets.
+
+This script combines locally classified English samples with two public
+FineWeb educational datasets from Hugging Face.  After merging the samples,
+the resulting data is balanced across the available ``int_score`` classes.
+
+The final, balanced dataset is saved to ``../../data/english_fineweb_merged_data.csv``.
+
+The defaults favour loading more samples from ``fineweb-edu-score-2`` as these
+contain lower scores, helping balance the classes.
+"""
+
+from __future__ import annotations
+
 import os
+from typing import List
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from datasets import load_dataset
+
 
 HF_DATASET_SCORE_3_NAME = "HuggingFaceFW/fineweb-edu"
 HF_CONFIG_SCORE_3 = "CC-MAIN-2024-22"
 HF_DATASET_SCORE_2_NAME = "HuggingFaceFW/fineweb-edu-score-2"
 HF_CONFIG_SCORE_2 = "CC-MAIN-2024-18"
-CSV_FILE_PATH = "data/fineweb_train_classifier.csv"
+
+# Base directory for data files (relative to this script)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
+
+# Path to locally classified FineWeb samples
+LOCAL_CSV_PATH = os.path.join(BASE_DIR, "english_classified_samples.csv")
+# Output path for the merged, balanced dataset
+OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "english_fineweb_merged_data.csv")
+
 COMMON_COLUMNS = ["text", "language_score", "token_count", "int_score"]
 
 
 def _load_hf_samples(
-    dataset_name: str, config_name: str, num_samples: int, split: str = "train"
+    dataset_name: str,
+    config_name: str,
+    num_samples: int,
+    split: str = "train",
 ) -> pd.DataFrame:
-    """
-    Helper function to stream and collect a specified number of samples from a HuggingFace dataset.
-    Ensures the returned DataFrame has the COMMON_COLUMNS.
-    """
-    print(
-        f"Streaming {num_samples} samples from HuggingFace dataset: {dataset_name} (config: {config_name})..."
-    )
+    """Stream ``num_samples`` rows from a Hugging Face dataset.
 
+    Parameters
+    ----------
+    dataset_name:
+        Name of the dataset on the Hub.
+    config_name:
+        Config to load from the dataset.
+    num_samples:
+        Maximum number of samples to collect.
+    split:
+        Split to load.  Defaults to ``"train"``.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the requested samples.  Missing columns are filled
+        with ``None``.
+    """
+
+    print(
+        f"Streaming {num_samples} samples from {dataset_name} ({config_name}) ..."
+    )
     try:
-        hf_stream = load_dataset(
+        stream = load_dataset(
             dataset_name,
             name=config_name,
             split=split,
             streaming=True,
         )
-    except Exception as e:
-        print(
-            f"Error loading HuggingFace dataset {dataset_name} (config: {config_name}): {e}"
-        )
-        print("Returning an empty DataFrame for this source.")
-        return pd.DataFrame(
-            columns=COMMON_COLUMNS
-        )  # Return empty df with expected columns
+    except Exception as exc:  # pragma: no cover - network errors
+        print(f"Failed to load {dataset_name}: {exc}")
+        return pd.DataFrame(columns=COMMON_COLUMNS)
 
-    collected_samples = []
-    for i, sample in enumerate(hf_stream):
-        if i >= num_samples:
+    collected: List[dict] = []
+    for idx, sample in enumerate(stream):
+        if idx >= num_samples:
             break
-        collected_samples.append(sample)
+        row = {col: sample.get(col) for col in COMMON_COLUMNS}
+        if row.get("int_score") is None and sample.get("score") is not None:
+            score = sample["score"]
+            row["int_score"] = int(round(max(0, min(float(score), 5))))
+        collected.append(row)
 
-    print(f"Collected {len(collected_samples)} samples from {dataset_name}.")
-
-    df = pd.DataFrame(collected_samples)
-
-    return df[COMMON_COLUMNS]
+    print(f"Collected {len(collected)} samples from {dataset_name}")
+    return pd.DataFrame(collected, columns=COMMON_COLUMNS)
 
 
-# --- Main Function ---
+def _load_local_samples(num_samples: int) -> pd.DataFrame:
+    """Load locally classified samples from ``LOCAL_CSV_PATH``."""
+
+    print(f"Loading {num_samples} local samples from {LOCAL_CSV_PATH} ...")
+    if not os.path.exists(LOCAL_CSV_PATH):
+        print("Local CSV not found, returning empty DataFrame")
+        return pd.DataFrame(columns=COMMON_COLUMNS)
+
+    try:
+        df = pd.read_csv(LOCAL_CSV_PATH, on_bad_lines="skip")
+    except Exception as exc:  # pragma: no cover - file errors
+        print(f"Failed to load local CSV: {exc}")
+        return pd.DataFrame(columns=COMMON_COLUMNS)
+
+    subset = df[COMMON_COLUMNS].head(num_samples)
+    print(f"Loaded {len(subset)} local samples")
+    return subset
+
+
 def load_and_process_dataset(
-    num_samples_score_3: int = 300,  # Default based on original code's hardcoded value
-    num_samples_score_2: int = 350,  # Default based on original code's hardcoded value
-    num_samples_csv: int = 500,  # Renamed from num_smaples_score_full, default based on original
+    num_samples_score_3: int = 3500,
+    num_samples_score_2: int = 2500,
+    num_samples_csv: int = 1000,
 ) -> pd.DataFrame:
-    """
-    Loads and processes data from multiple sources (HuggingFace datasets and a CSV file)
-    and merges them into a single Pandas DataFrame.
+    """Load, merge and balance the English educational datasets."""
 
-    Args:
-        num_samples_score_3 (int): Number of samples to collect from the 'fineweb-edu' HuggingFace dataset.
-                                   Defaults to 300.
-        num_samples_score_2 (int): Number of samples to collect from the 'fineweb-edu-score-2' HuggingFace dataset.
-                                   Defaults to 350.
-        num_samples_csv (int): Number of samples to read from the local CSV file.
-                               Defaults to 500.
-
-    Returns:
-        pd.DataFrame: A merged DataFrame containing processed samples from all sources.
-                      Columns include: 'text', 'language_score', 'token_count', 'score'.
-                      Returns an empty DataFrame with correct columns if no data is loaded.
-    """
-
-    # 1. Load HuggingFace datasets
-    hf_df_score_3 = _load_hf_samples(
+    df_score_3 = _load_hf_samples(
         HF_DATASET_SCORE_3_NAME, HF_CONFIG_SCORE_3, num_samples_score_3
     )
-    hf_df_score_2 = _load_hf_samples(
+    df_score_2 = _load_hf_samples(
         HF_DATASET_SCORE_2_NAME, HF_CONFIG_SCORE_2, num_samples_score_2
     )
+    df_local = _load_local_samples(num_samples_csv)
 
-    # 2. Load samples from the CSV file
-    csv_df = pd.DataFrame(
-        columns=COMMON_COLUMNS
-    )  # Initialize empty with expected columns
-    print(f"Loading samples from CSV: {CSV_FILE_PATH}...")
-    if not os.path.exists(CSV_FILE_PATH):
-        print(
-            f"Warning: CSV file not found at '{CSV_FILE_PATH}'. Skipping CSV loading."
-        )
-    else:
-        try:
-            csv_df_raw = pd.read_csv(CSV_FILE_PATH)
-
-            # Ensure common columns exist, add missing with NaN/None if necessary
-
-            # Select relevant columns and limit samples
-            csv_df = csv_df_raw[COMMON_COLUMNS].head(num_samples_csv)
-            print(f"Loaded {len(csv_df)} samples from CSV.")
-        except pd.errors.EmptyDataError:
-            print(
-                f"Warning: CSV file '{CSV_FILE_PATH}' is empty. Skipping CSV loading."
-            )
-        except Exception as e:
-            print(
-                f"Error loading CSV file '{CSV_FILE_PATH}': {e}. Skipping CSV loading."
-            )
-
-    # 3. Concatenate all DataFrames
-    # Filter out any empty DataFrames before concatenation to prevent errors
-    dataframes_to_concat = [
-        df for df in [hf_df_score_2, hf_df_score_3, csv_df] if not df.empty
-    ]
-
-    if not dataframes_to_concat:
-        print("Warning: No dataframes to concatenate. Returning an empty DataFrame.")
-        return pd.DataFrame(
-            columns=COMMON_COLUMNS
-        )  # Ensure empty df has expected columns
-
-    merged_df = pd.concat(dataframes_to_concat, ignore_index=True)
-
-    print(f"Total number of samples in merged DataFrame: {len(merged_df)}")
-
-    return merged_df
+    merged = pd.concat([df_local, df_score_2, df_score_3], ignore_index=True)
+    print(f"Merged dataset contains {len(merged)} samples")
+    return merged
 
 
-def plot_score_distribution(merged_df):
+def plot_score_distribution(df: pd.DataFrame) -> None:
+    """Plot a histogram of ``int_score`` values."""
 
-    # Plot the distribution of scores
-    plt.figure(figsize=(10, 6))
-    sns.histplot(merged_df["score"], bins=30, kde=True)
-    plt.title("Score Distribution")
-    plt.xlabel("Score")
-    plt.ylabel("Frequency")
+    plt.figure(figsize=(8, 5))
+    # Count occurrences for each int_score 0-5
+    value_counts = df['int_score'].value_counts().reindex(range(0, 6), fill_value=0)
+    sns.barplot(x=value_counts.index, y=value_counts.values, palette="viridis")
+    plt.xlabel("int_score")
+    plt.ylabel("count")
+    plt.title("Distribution of int_score (0-5)")
+    plt.xticks(range(0, 6))
+    plt.tight_layout()
     plt.show()
 
 
-def save_merged_df_to_csv(df, filename="merged_fineweb_samples.csv"):
-    """
-    Saves the merged DataFrame to a CSV file.
+def save_to_csv(df: pd.DataFrame, filename: str = OUTPUT_CSV_PATH) -> None:
+    """Save ``df`` to ``filename``."""
 
-    Args:
-        df (pd.DataFrame): The DataFrame to save.
-        filename (str): The name of the output CSV file. Defaults to "merged_fineweb_samples.csv".
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    df.to_csv(filename, index=False)
+    print(f"Saved merged dataset to {filename}")
+
+
+def limit_int_score_2_and_3(df: pd.DataFrame, N_2: int, N_3: int) -> pd.DataFrame:
     """
-    # Ensure output directory exists
-    os.makedirs("data", exist_ok=True)
-    output_path = os.path.join("data", os.path.basename(filename))
-    df.to_csv(output_path, index=False)
-    print(f"Merged DataFrame saved to {output_path}")
+    Limit the number of samples with int_score == 2 and int_score == 3 to N_2 and N_3 respectively.
+    All other int_score classes (0, 1, 4, 5) are unchanged.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The merged dataset.
+    N_2 : int
+        Maximum number of samples to keep for int_score == 2.
+    N_3 : int
+        Maximum number of samples to keep for int_score == 3.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with limited samples for int_score 2 and 3.
+    """
+    # Split by int_score
+    df_2 = df[df["int_score"] == 2].head(N_2)
+    df_3 = df[df["int_score"] == 3].head(N_3)
+    df_rest = df[df["int_score"].isin([0, 1, 4, 5])]
+    # Concatenate and shuffle
+    result = pd.concat([df_rest, df_2, df_3], ignore_index=True)
+    return result
 
 
 if __name__ == "__main__":
-    num_samples_score_3 = 500
-    num_samples_score_2 = 500
-    num_samples_csv = 1000
-
-    merged_df = load_and_process_dataset(
-        num_samples_score_3=num_samples_score_3,
-        num_samples_score_2=num_samples_score_2,
-        num_samples_csv=num_samples_csv,
-    )
-
+    merged_df = load_and_process_dataset()
+    # Limit int_score 2 and 3 to 1000 samples each
+    merged_df = limit_int_score_2_and_3(merged_df, N_2=1000, N_3=1000)
     plot_score_distribution(merged_df)
-    save_merged_df_to_csv(merged_df, "data/merged_fineweb_samples.csv")
+    save_to_csv(merged_df)
+
+
+
