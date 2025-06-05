@@ -25,7 +25,7 @@ print("Loading config...")
 with open("training/config/base.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-val_split = 0.1  # Proportion of data to use for validation
+val_split = 0.5  # Proportion of data to use for validation
 
 model_name = config["model_name"]
 model_dir = config["model_dir"]
@@ -85,8 +85,11 @@ class OrdinalClassificationDataset(torch.utils.data.Dataset): # Renamed for clar
 print("Preparing datasets...")
 train_dataset = OrdinalClassificationDataset(train_texts, train_labels)
 val_dataset = OrdinalClassificationDataset(val_texts, val_labels)
-
+# Add this:
+print(f"Size of validation dataset: {len(val_dataset)}")
+print(f"Validation labels (first few): {val_labels[:10]}")
 print("Loading model...")
+
 model = AutoModelForSequenceClassification.from_pretrained(
     model_name,
     num_labels=num_labels,

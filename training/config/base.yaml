@@ -12,11 +12,11 @@ evaluation_strategy: "epoch"
 logging_strategy: "epoch"
 save_strategy: "epoch"
 
-learning_rate: 2e-5
+learning_rate: 2e-3
 
 
 # Danish/English data selection for merging
-num_danish_samples: 100      # Number of Danish samples to include
+num_danish_samples:       # Number of Danish samples to include
 num_english_samples: 0       # Number of English samples to include
 danish_score_min: 0             # Optional: minimum educational score (inclusive)
 danish_score_max: 5             # Optional: maximum educational score (inclusive)
