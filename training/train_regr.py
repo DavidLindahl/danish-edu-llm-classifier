@@ -1,20 +1,10 @@
 """Training script for the Danish educational score model."""
-
 import sys
 import os
-
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
 import evaluate
-print(f"Imported evaluate module from: {evaluate.__file__}")
-
 import time
-# create a timestamp for the run
-timestamp = time.strftime("%Y%m%d-%H%M%S")
-
-# Assume this path setup is correct for your project structure
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 import pandas as pd
 from transformers import (
     AutoTokenizer,
@@ -23,11 +13,11 @@ from transformers import (
     Trainer,
     DataCollatorWithPadding,
 )
-
 from datasets import Dataset, ClassLabel
-
 import yaml
-# Assuming this handles loading and merging data into a pandas DataFrame
+
+# path setup to import data processing module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from data_processing.data_process import get_merged_dataset
 
 # Load config
@@ -64,28 +54,30 @@ weight_decay = config.get("weight_decay", 0.01)
 #     danish_data_amount=num_danish_samples,
 # )
 # print(f"Loaded dataset with {len(df)} samples.")
+
 df = pd.read_csv("data/english_fineweb_merged_data.csv")
 
-# pick out 1000 random samples
+# pick out 100 random samples
 df = df.sample(n=100, random_state=42)
 
 # Convert to Hugging Face dataset
 dataset = Dataset.from_pandas(df[["text", "int_score"]])
 
-# Ensure score is an integer between 0 and 5
+# Ensure score is an integer between 0 and 4
 dataset = dataset.map(
     lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))}
 )
+
 # Cast to ClassLabel *after* clipping/rounding if you want stratification based on the final integer values
 # This is primarily for stratify_by_column. The actual labels for regression training will be float.
-dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(6)]))
+dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
 
 dataset = dataset.train_test_split(
     train_size=1 - val_split, seed=42, stratify_by_column="score"
 )
 
 print("Loading tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
 
 # Ensure tokenizer has a pad token
 if tokenizer.pad_token is None:
@@ -101,7 +93,8 @@ def preprocess(examples):
 
     # Prepare labels as float32 for regression loss
     # The 'score' column contains the integer value after clipping/casting
-    batch["labels"] = np.array(examples["score"], dtype=np.float32)
+    #batch["labels"] = np.array(examples["score"], dtype=np.float32).?reshape(-1, 1)
+    batch["labels"] = np.float32(examples["score"])  # Reshape for single output regression
     return batch
 
 dataset = dataset.map(preprocess, batched=True)
@@ -111,29 +104,51 @@ train_dataset = dataset["train"]
 val_dataset = dataset["test"]
 
 print("Loading model...")
-# --- MODIFICATION START ---
+# --- REG-MODIFICATION START ---
 # Set problem_type="regression" and num_labels=1
 # Add dropout = 0.0 as seen in the example
 model = AutoModelForSequenceClassification.from_pretrained(
     model_name,
     num_labels=1, # 1 output neuron for regression
-    problem_type="regression", # Explicitly set problem type
+    # problem_type="regression", # Explicitly set problem type
     classifier_dropout=0.0, # As in the inspiring example
     hidden_dropout_prob=0.0, # As in the inspiring example (applies to base model encoder)
     output_hidden_states=False # Keep this False unless you need them
 )
-# --- MODIFICATION END ---
+# --- REG-MODIFICATION END ---
 
 # Freezing base model parameters
 # This looks correct for freezing the core transformer layers
+
+#might need changes...:
 print("Freezing base model parameters...")
 for param in model.base_model.parameters():
     param.requires_grad = False
 print("Base model parameters frozen.")
 
+# create a timestamp for the run
+timestamp = time.strftime("%Y%m%d-%H%M%S")
 
 print("Setting up training arguments...")
 training_args = TrainingArguments(
+    eval_strategy="steps",
+    save_strategy="steps",
+    eval_steps=100,
+    save_steps=100,
+    logging_steps=100,
+    learning_rate=3e-4,
+    num_train_epochs=20,
+    seed=0,
+    per_device_train_batch_size=64,
+    per_device_eval_batch_size=32,
+    eval_on_start=True,
+    load_best_model_at_end=True,
+    metric_for_best_model="f1_macro",
+    greater_is_better=True,
+    bf16=True,
+)
+
+"""
     output_dir=model_dir,
     num_train_epochs=num_train_epochs,
     per_device_train_batch_size=per_device_train_batch_size,
@@ -152,6 +167,7 @@ training_args = TrainingArguments(
     greater_is_better=True if evaluation_strategy != "no" else None, # Added common practice
     # bf16=True, # Add this if your hardware supports it and you want faster training/less memory
 )
+"""
 
 
 def compute_metrics(eval_pred):

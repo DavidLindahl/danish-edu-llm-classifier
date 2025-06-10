@@ -17,5 +17,5 @@ learning_rate: 2e-5
 num_danish_samples: 0      # Number of Danish samples to include
 num_english_samples: 20       # Number of English samples to include
 danish_score_min: 0             # Optional: minimum educational score (inclusive)
-danish_score_max: 5             # Optional: maximum educational score (inclusive)
+danish_score_max: 4             # Optional: maximum educational score (inclusive)
 danish_random_seed: 42          # Optional: random seed for sampling
