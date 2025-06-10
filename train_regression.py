@@ -12,7 +12,7 @@ import argparse
 import os
 from sklearn.metrics import classification_report, confusion_matrix
 from data_processing.data_process import get_merged_dataset
-from datasets import Dataset
+from datasets import Dataset, Value
 
 
 def compute_metrics(eval_pred):
@@ -52,7 +52,7 @@ def main(args):
     df = df.rename(columns={"int_score": "score"})
     dataset = Dataset.from_pandas(df)
     dataset = dataset.cast_column(
-        args.target_column, ClassLabel(names=[str(i) for i in range(6)])
+        args.target_column, Value("float32")
     )
     dataset = dataset.train_test_split(
         train_size=0.9, seed=42
@@ -60,9 +60,7 @@ def main(args):
 
     model = AutoModelForSequenceClassification.from_pretrained(
         args.base_model_name,
-        num_labels=1,
-        classifier_dropout=0.0,
-        hidden_dropout_prob=0.0,
+        num_labels=1, 
         output_hidden_states=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(
@@ -90,9 +88,9 @@ def main(args):
         hub_model_id=args.output_model_name,
         eval_strategy="steps",
         save_strategy="steps",
-        eval_steps=1000,
+        eval_steps=40,
         save_steps=1000,
-        logging_steps=100,
+        logging_steps=10,
         learning_rate=3e-4,
         num_train_epochs=20,
         seed=0,
@@ -100,8 +98,8 @@ def main(args):
         per_device_eval_batch_size=128,
         eval_on_start=True,
         load_best_model_at_end=True,
-        metric_for_best_model="f1_macro",
-        greater_is_better=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
         bf16=False,
         push_to_hub=False,
     )
