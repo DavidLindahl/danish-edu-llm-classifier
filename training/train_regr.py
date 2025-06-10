@@ -65,15 +65,16 @@ weight_decay = config.get("weight_decay", 0.01)
 # )
 # print(f"Loaded dataset with {len(df)} samples.")
 df = pd.read_csv("data/english_fineweb_merged_data.csv")
+
 # pick out 1000 random samples
-df = df.sample(n=1000, random_state=42)
+df = df.sample(n=100, random_state=42)
 
 # Convert to Hugging Face dataset
 dataset = Dataset.from_pandas(df[["text", "int_score"]])
 
 # Ensure score is an integer between 0 and 5
 dataset = dataset.map(
-    lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 5))}
+    lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))}
 )
 # Cast to ClassLabel *after* clipping/rounding if you want stratification based on the final integer values
 # This is primarily for stratify_by_column. The actual labels for regression training will be float.
@@ -162,9 +163,9 @@ def compute_metrics(eval_pred):
 
     # Squeeze to remove the dimension of size 1 (from num_labels=1)
     # Round to get integer predictions and labels
-    # Clip predictions to the valid range [0, 5]
+    # Clip predictions to the valid range [0, 4]
     # Cast to int for classification metrics
-    preds = np.round(logits.squeeze()).clip(0, 5).astype(int)
+    preds = np.round(logits.squeeze()).clip(0, 4).astype(int)
     labels = np.round(labels.squeeze()).astype(int) # labels should already be integers, but rounding is safe
 
     # Load evaluation metrics - already done in the example, keep as is
@@ -172,6 +173,7 @@ def compute_metrics(eval_pred):
     recall_metric = evaluate.load("recall")
     f1_metric = evaluate.load("f1")
     accuracy_metric = evaluate.load("accuracy")
+    #MeanSquaredError = evaluate.load("mse")
 
     # Compute metrics using macro average for multi-class classification
     # Handle cases where a class might not be present in predictions or labels to avoid errors
@@ -186,6 +188,8 @@ def compute_metrics(eval_pred):
     f1 = f1_metric.compute(predictions=preds, references=labels, average="macro")["f1"]
     # Accuracy metric does not have average and does not need/support zero_division
     accuracy = accuracy_metric.compute(predictions=preds, references=labels)["accuracy"]
+    # Mean Squared Error for regression evaluation
+    mse = ((logits.squeeze() - labels) ** 2).mean()
 
     # Print detailed classification report and confusion matrix
     # Ensure target_names match the possible score values (0-5)
@@ -213,6 +217,8 @@ def compute_metrics(eval_pred):
         "recall": recall,
         "f1_macro": f1,
         "accuracy": accuracy,
+        "mse": mse,
+        "classification_report": report,
     }
 
 
