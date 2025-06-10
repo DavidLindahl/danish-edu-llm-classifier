@@ -47,6 +47,8 @@ def compute_metrics(eval_pred):
 
 
 def main(args):
+    os.environ['XLA_USE_BF16'] = '1'
+    os.environ['XLA_TENSOR_ALLOCATOR_MAXSIZE'] = '100000000'
     df = get_merged_dataset(1000,1000)
 
     df = df.rename(columns={"int_score": "score"})
