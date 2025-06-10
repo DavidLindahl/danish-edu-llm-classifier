@@ -182,10 +182,17 @@ def limit_int_score_1_2_3(df: pd.DataFrame, N_1: int, N_2: int, N_3: int) -> pd.
     return result
 
 
+def convert_int_score_5_to_4(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert all int_score 5 to 4 in the DataFrame."""
+    df.loc[df['int_score'] == 5, 'int_score'] = 4
+    return df
+
 if __name__ == "__main__":
     merged_df = load_and_process_dataset()
     # Limit int_score 1, 2, and 3 to 1000 samples each
     merged_df = limit_int_score_1_2_3(merged_df, N_1=1000, N_2=1000, N_3=1000)
+    # Convert int_score 5 to 4
+    merged_df = convert_int_score_5_to_4(merged_df)
     plot_score_distribution(merged_df)
     save_to_csv(merged_df)
 
