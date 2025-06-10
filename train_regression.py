@@ -45,17 +45,24 @@ def compute_metrics(eval_pred):
         "accuracy": accuracy,
     }
 
-def training_function(args):
-    # All the code from your original main() function goes here
-    # Starting from get_merged_dataset() all the way to trainer.train()
-    df = get_merged_dataset(1000, 1000)
+
+def main(args):
+    os.environ['XLA_USE_BF16'] = '1'
+    os.environ['XLA_TENSOR_ALLOCATOR_MAXSIZE'] = '100000000'
+    df = get_merged_dataset(1000,1000)
+
+    df = df.rename(columns={"int_score": "score"})
     dataset = Dataset.from_pandas(df)
-    dataset = dataset.cast_column(args.target_column, Value("float32"))
-    dataset = dataset.train_test_split(train_size=0.9, seed=42)
+    dataset = dataset.cast_column(
+        args.target_column, Value("float32")
+    )
+    dataset = dataset.train_test_split(
+        train_size=0.9, seed=42
+    )
 
     model = AutoModelForSequenceClassification.from_pretrained(
         args.base_model_name,
-        num_labels=1,
+        num_labels=1, 
         output_hidden_states=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(
@@ -73,14 +80,19 @@ def training_function(args):
     dataset = dataset.map(preprocess, batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
+    for param in model.bert.embeddings.parameters():
+        param.requires_grad = False
+    for param in model.bert.encoder.parameters():
+        param.requires_grad = False
+
     training_args = TrainingArguments(
         output_dir=args.checkpoint_dir,
         hub_model_id=args.output_model_name,
         eval_strategy="steps",
         save_strategy="steps",
-        logging_steps=10,
         eval_steps=10,
-        save_steps=40,
+        save_steps=10,
+        logging_steps=10,
         learning_rate=3e-4,
         num_train_epochs=20,
         seed=0,
@@ -91,7 +103,6 @@ def training_function(args):
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         bf16=False,
-        fp16=False,
         push_to_hub=False,
     )
 
@@ -105,31 +116,33 @@ def training_function(args):
         compute_metrics=compute_metrics,
     )
 
-    print("\n--- Starting Trainer.train() via notebook_launcher ---")
     trainer.train()
     trainer.save_model(os.path.join(args.checkpoint_dir, "final"))
 
-# 2. Your __main__ block now calls notebook_launcher
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--base_model_name", type=str, default="Snowflake/snowflake-arctic-embed-m"
     )
+    # The 'dataset_name' argument is no longer needed since we use get_merged_dataset()
+    # parser.add_argument("--dataset_name", ...) # This can be deleted
+    
+    # Set the target column to 'score', which we renamed from 'int_score'
     parser.add_argument("--target_column", type=str, default="score")
+    
+    # Change the checkpoint directory to a local, writable path
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default="./model_checkpoints",
+        default="./model_checkpoints", # This will save to a folder in your current directory
     )
     parser.add_argument(
-        "--output_model_name", type=str, default="my-local-fineweb-scorer"
+        "--output_model_name", type=str, default="my-local-fineweb-scorer" # Changed default to reflect it's local
     )
     args = parser.parse_args()
     
+    # Ensure the local checkpoint directory exists
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
-    # 3. Import notebook_launcher and use it
-    from accelerate import notebook_launcher
-    
-    # This will handle the distributed setup for the TPU
-    notebook_launcher(training_function, args=(args,), num_processes=8) # For a v2-8 TPU
+    main(args)
