@@ -5,15 +5,15 @@ import os
 
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
-import evaluate
-print(f"Imported evaluate module from: {evaluate.__file__}")
+# import evaluate
+# print(f"Imported evaluate module from: {evaluate.__file__}")
 
 import time
 # create a timestamp for the run
 timestamp = time.strftime("%Y%m%d-%H%M%S")
 
 # Assume this path setup is correct for your project structure
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pandas as pd
 from transformers import (
@@ -56,25 +56,26 @@ save_strategy = config.get("save_strategy", "epoch")
 weight_decay = config.get("weight_decay", 0.01)
 
 # Load data
-# print(
-#     f"Loading {num_english_samples} English and {num_danish_samples} Danish samples..."
-# )
-# df = get_merged_dataset(
-#     english_data_amount=num_english_samples,
-#     danish_data_amount=num_danish_samples,
-# )
-# print(f"Loaded dataset with {len(df)} samples.")
-df = pd.read_csv("data/english_fineweb_merged_data.csv")
-# pick out 1000 random samples
-df = df.sample(n=1000, random_state=42)
+print(
+    f"Loading {num_english_samples} English and {num_danish_samples} Danish samples..."
+)
+df = get_merged_dataset(
+    english_data_amount=num_english_samples,
+    danish_data_amount=num_danish_samples,
+)
+print(f"Loaded dataset with {len(df)} samples.")
+# df = pd.read_csv("data/english_fineweb_merged_data.csv")
+# # pick out 1000 random samples
+# df = df.sample(n=1000, random_state=42)
 
 # Convert to Hugging Face dataset
-dataset = Dataset.from_pandas(df[["text", "int_score"]])
+dataset = Dataset.from_pandas(df[["text", "int_score" , "score"]])
 
 # Ensure score is an integer between 0 and 5
 dataset = dataset.map(
     lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 5))}
 )
+
 # Cast to ClassLabel *after* clipping/rounding if you want stratification based on the final integer values
 # This is primarily for stratify_by_column. The actual labels for regression training will be float.
 dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(6)]))
@@ -108,6 +109,8 @@ data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
 train_dataset = dataset["train"]
 val_dataset = dataset["test"]
+
+# Trying to change the "labels" column to integer instead of fl
 
 print("Loading model...")
 # --- MODIFICATION START ---

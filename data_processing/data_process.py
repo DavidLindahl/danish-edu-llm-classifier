@@ -4,8 +4,8 @@ import os
 
 
 def get_merged_dataset(
-    english_data_amount=1000,
-    danish_data_amount=0,
+    english_data_amount=500,
+    danish_data_amount=500,
     english_path="data/english_fineweb_merged_data.csv",
     danish_path="data/danish_filtered_labelled_data.json",
     random_seed=42,
@@ -15,19 +15,20 @@ def get_merged_dataset(
         english_data_amount (int): Number of English samples to load.
         danish_data_amount (int): Number of Danish samples to load.
         english_path (str): Path to the English dataset CSV file.
-        danish_path (str): Path to the Danish dataset JSON file.
+        danish_path (str): Path to the Danish dataset CSV file.
         random_seed (int): Random seed for reproducibility.
     Returns:
         pd.DataFrame: Merged DataFrame containing both English and Danish data.
     """
     # Load English data
     english_df = pd.read_csv(english_path)
-    if english_data_amount > 0:
+    if english_data_amount >= 0:
         english_df = english_df.sample(
             n=min(english_data_amount, len(english_df)), random_state=random_seed
         )
+        # E
     # Load Danish data
-    if danish_data_amount > 0:
+    if danish_data_amount >= 0:
         with open(danish_path, "r", encoding="utf-8") as f:
             danish_data = json.load(f)
         danish_df = pd.DataFrame(danish_data)
@@ -45,3 +46,10 @@ def get_merged_dataset(
     else:
         merged_df = english_df.copy()
     return merged_df
+
+if __name__ == "__main__":
+    merged_dataset = get_merged_dataset(
+        )
+    print(merged_dataset.head())
+    print(f"Total samples: {len(merged_dataset)}")
+    print(f"Columns: {merged_dataset.columns.tolist()}")
