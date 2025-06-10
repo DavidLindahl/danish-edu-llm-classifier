@@ -80,10 +80,10 @@ def main(args):
     dataset = dataset.map(preprocess, batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    for param in model.bert.embeddings.parameters():
+    print("Freezing the body of the XLM-Roberta model...")
+    for param in model.roberta.parameters():
         param.requires_grad = False
-    for param in model.bert.encoder.parameters():
-        param.requires_grad = False
+    print("Model body frozen. Only the classifier head will be trained.")
 
     training_args = TrainingArguments(
         output_dir=args.checkpoint_dir,
@@ -123,7 +123,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--base_model_name", type=str, default="Snowflake/snowflake-arctic-embed-m"
+        "--base_model_name", type=str, default="FacebookAI/xlm-roberta-base"
     )
     # The 'dataset_name' argument is no longer needed since we use get_merged_dataset()
     # parser.add_argument("--dataset_name", ...) # This can be deleted
