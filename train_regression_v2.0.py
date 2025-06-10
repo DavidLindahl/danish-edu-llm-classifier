@@ -16,6 +16,7 @@ from data_processing.data_process import get_merged_dataset
 import torch # --- CHANGE 2: Import torch for nn.Module ---
 import torch.nn as nn
 import torch.nn.functional as F
+from sentence_transformers import SentenceTransformer
 
 
 # --- CHANGE 3: Create a custom model class ---
