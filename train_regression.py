@@ -47,8 +47,8 @@ def compute_metrics(eval_pred):
 
 
 def main(args):
-    os.environ['XLA_USE_BF16'] = '1'
-    os.environ['XLA_TENSOR_ALLOCATOR_MAXSIZE'] = '100000000'
+    # os.environ['XLA_USE_BF16'] = '1'
+    # os.environ['XLA_TENSOR_ALLOCATOR_MAXSIZE'] = '100000000'
     df = get_merged_dataset(1000,1000)
 
     df = df.rename(columns={"int_score": "score"})
@@ -123,7 +123,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--base_model_name", type=str, default="Snowflake/snowflake-arctic-embed-m"
+        "--base_model_name", type=str, default="FacebookAI/xlm-roberta-base"
     )
     # The 'dataset_name' argument is no longer needed since we use get_merged_dataset()
     # parser.add_argument("--dataset_name", ...) # This can be deleted
