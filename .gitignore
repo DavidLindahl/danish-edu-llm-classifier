@@ -6,3 +6,4 @@ test_length_df.ipynb
 venv/
 wandb/
 models/
+trainer_output/
