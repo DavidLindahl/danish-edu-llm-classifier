@@ -38,12 +38,12 @@ from tqdm import tqdm
 # To calculate Krippendorff's Alpha, you might need to install a library.
 # `simpledorff` is a great choice: pip install simpledorff
 # If you don't have it, you can comment out the related lines.
-try:
-    from simpledorff import calculate_krippendorffs_alpha_for_df
-except ImportError:
-    print("Warning: `simpledorff` is not installed. Skipping Krippendorff's Alpha calculation.")
-    print("To install, run: pip install simpledorff")
-    calculate_krippendorffs_alpha_for_df = None
+# try:
+#     from simpledorff import calculate_krippendorffs_alpha_for_df
+# except ImportError:
+#     print("Warning: `simpledorff` is not installed. Skipping Krippendorff's Alpha calculation.")
+#     print("To install, run: pip install simpledorff")
+#     calculate_krippendorffs_alpha_for_df = None
 
 
 def run_inference(model, tokenizer, test_dataset, device, batch_size):
@@ -133,8 +133,8 @@ def main(args):
     # b. Classification Metrics
     print("[Classification Metrics]")
     accuracy = accuracy_score(true_labels, final_predictions)
-    f1_macro = f1_score(true_labels, final_predictions, average='macro', zero_division=0)
-    f1_weighted = f1_score(true_labels, final_predictions, average='weighted', zero_division=0)
+    f1_macro = f1_score(true_labels, final_predictions, average='macro')
+    f1_weighted = f1_score(true_labels, final_predictions, average='weighted')
     
     print(f"  - Accuracy: {accuracy:.4f}")
     print(f"  - F1-Score (Macro): {f1_macro:.4f}")
@@ -155,25 +155,25 @@ def main(args):
     print("\n")
 
 
-    # e. Krippendorff's Alpha
-    if calculate_krippendorffs_alpha_for_df:
-        print("[Agreement Metric]")
-        # Create a DataFrame in the format simpledorff expects
-        kripp_df = pd.DataFrame({
-            'doc_id': test_df.index,
-            'text': test_df['text'],
-            'model': final_predictions,
-            'human': true_labels
-        })
+    # # e. Krippendorff's Alpha
+    # if calculate_krippendorffs_alpha_for_df:
+    #     print("[Agreement Metric]")
+    #     # Create a DataFrame in the format simpledorff expects
+    #     kripp_df = pd.DataFrame({
+    #         'doc_id': test_df.index,
+    #         'text': test_df['text'],
+    #         'model': final_predictions,
+    #         'human': true_labels
+    #     })
         
-        try:
-            k_alpha = calculate_krippendorffs_alpha_for_df(kripp_df,
-                                                            text_col='text',
-                                                            unit_col='doc_id',
-                                                            annotator_cols=['model', 'human'])
-            print(f"  - Krippendorff's Alpha (Model vs. Human): {k_alpha:.4f}\n")
-        except Exception as e:
-            print(f"Could not calculate Krippendorff's Alpha. Error: {e}")
+    #     try:
+    #         k_alpha = calculate_krippendorffs_alpha_for_df(kripp_df,
+    #                                                         text_col='text',
+    #                                                         unit_col='doc_id',
+    #                                                         annotator_cols=['model', 'human'])
+    #         print(f"  - Krippendorff's Alpha (Model vs. Human): {k_alpha:.4f}\n")
+    #     except Exception as e:
+    #         print(f"Could not calculate Krippendorff's Alpha. Error: {e}")
 
 
     print("--- Evaluation Complete ---")
@@ -184,15 +184,15 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--model_path",
+        default = "models/Face_Danish=0_06.11-11.27",
         type=str,
-        required=True,
         help="Path to the directory containing the saved model and tokenizer."
     )
     parser.add_argument(
         "--test_data_path",
+        default = "data/fineweb-c_danish.csv",
         type=str,
-        required=True,
-        help="Path to the test data CSV file. Must contain 'text' and 'int_score' columns."
+        help= "Path to you test data CSV file. The CSV must contain 'text' and 'int_score' columns."
     )
     parser.add_argument(
         "--device",
