@@ -82,12 +82,8 @@ def main(args):
     # 1. Setup Device
     device = torch.device(args.device if torch.cuda.is_available() and args.device == 'cuda' else 'cpu')
     print(f"Using device: {device}")
-
+    
     # 2. Load Model and Tokenizer
-    if not os.path.exists(args.model_path):
-        print(f"Error: Model path not found at {args.model_path}")
-        return
-        
     print(f"Loading model from: {args.model_path}")
     model = AutoModelForSequenceClassification.from_pretrained(args.model_path).to(device)
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
@@ -187,13 +183,13 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--model_path",
-        default = "models/Face_Danish=0_06.11-12.15",
+        default = "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot",
         type=str,
         help="Path to the directory containing the saved model and tokenizer."
     )
     parser.add_argument(
         "--test_data_path",
-        default = "data/danish_filtered_labelled_data.json",
+        default = "data/danish_filtered_labelled_data.csv",
         type=str,
         help= "Path to you test data CSV file. The CSV must contain 'text' and 'int_score' columns."
     )
