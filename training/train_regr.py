@@ -44,13 +44,13 @@ def main(val_split, model_name, model_dir, num_danish_samples,
 
     # Load data
     print(f"Loading {num_english_samples} English and {num_danish_samples} Danish samples...")
-    # df = get_merged_dataset(
-    #     english_data_amount=num_english_samples,
-    #     danish_data_amount=num_danish_samples,
-    # )
+    df = get_merged_dataset(
+        english_data_amount=num_english_samples,
+        danish_data_amount=num_danish_samples,
+    )
 
-    df = pd.read_csv("data/english_fineweb_merged_data.csv") 
-    df = df.sample(100, random_state=42)  # For testing, use a smaller sample
+    # df = pd.read_csv("data/english_fineweb_merged_data.csv") 
+    # df = df.sample(100, random_state=42)  # For testing, use a smaller sample
     print(f"Loaded dataset with {len(df)} samples.")
 
     # Convert to Hugging Face dataset
@@ -116,7 +116,7 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         load_best_model_at_end=True,
         metric_for_best_model="f1_macro",
         greater_is_better=True,
-        bf16=True,
+        bf16=False,
     )
 
     # Initialize trainer
