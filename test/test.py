@@ -123,7 +123,10 @@ def main(args):
     # 6. Calculate and Display Metrics
     print("\n--- Evaluation Metrics ---")
     labels = sorted(np.unique(true_labels))
+    if len(labels) != 5:
+        labels = [0,1,2,3,4] # Ensure we have 5 classes for classification metrics    
     target_names = [f"Class {i}" for i in labels]
+    print(f"target_names: {target_names}")
 
     # a. Regression Metric
     mse = mean_squared_error(true_labels, raw_predictions)
@@ -184,13 +187,13 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--model_path",
-        default = "models/Face_Danish=0_06.11-11.27",
+        default = "models/Face_Danish=0_06.11-12.15",
         type=str,
         help="Path to the directory containing the saved model and tokenizer."
     )
     parser.add_argument(
         "--test_data_path",
-        default = "data/fineweb-c_danish.csv",
+        default = "data/danish_filtered_labelled_data.json",
         type=str,
         help= "Path to you test data CSV file. The CSV must contain 'text' and 'int_score' columns."
     )
