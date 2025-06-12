@@ -4,6 +4,8 @@ import os
 import numpy as np
 import time
 import pandas as pd
+import torch
+from torch import nn
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -29,9 +31,10 @@ def load_config(config_path):
 
 
 def preprocess(examples, tokenizer):
-    """Preprocess examples by tokenizing text and converting scores to float."""
+    """Preprocess examples for CLASSIFICATION."""
     batch = tokenizer(examples["text"], truncation=True)
-    batch["labels"] = np.float32(examples["score"]) 
+    # Ensure labels are integers for CrossEntropyLoss
+    batch["labels"] = np.int64(examples["score"]) 
     return batch
 
 
@@ -40,87 +43,98 @@ def main(val_split, model_name, model_dir, num_danish_samples,
          per_device_train_batch_size, per_device_eval_batch_size, 
          evaluation_strategy, eval_steps, save_strategy, config):
     """Main training function that handles the entire training pipeline."""
-    # All config parameters are now passed directly as arguments
-
-    # Load data
+    
     print(f"Loading {num_english_samples} English and {num_danish_samples} Danish samples...")
     df = get_merged_dataset(
         english_data_amount=num_english_samples,
         danish_data_amount=num_danish_samples,
     )
-
-    # df = pd.read_csv("data/english_fineweb_merged_data.csv") 
-    # df = df.sample(100, random_state=42)  # For testing, use a smaller sample
     print(f"Loaded dataset with {len(df)} samples.")
 
-    # Convert to Hugging Face dataset
     dataset = Dataset.from_pandas(df[["text", "int_score"]])
-
-    # Ensure score is an integer between 0 and 4
     dataset = dataset.map(
         lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))}
     )
-
-    # Cast to ClassLabel for stratification
     dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
-
-    # Split dataset
+    
+    # Split dataset FIRST to calculate weights ONLY on the training set
     dataset = dataset.train_test_split(
         train_size=1 - val_split, seed=42, stratify_by_column="score"
     )
-
-    # Load model and tokenizer
-    print("Loading model...")
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_name,
-        num_labels=1,  # 1 output neuron for regression
-        classifier_dropout=0.0,
-        hidden_dropout_prob=0.0, 
-        output_hidden_states=False 
-    )
-
-    print("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
-
-    # Process dataset
-    dataset = dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-
+    
     train_dataset = dataset["train"]
     val_dataset = dataset["test"]
 
-    # Freeze base model parameters
-    print("Freezing base model parameters...")
-    for param in model.base_model.parameters():
-        param.requires_grad = False
-    print("Base model parameters frozen.")
+    # --- 1. Calculate Class Weights for CDW-CE Loss ---
+    print("Calculating class weights for CDW-CE loss...")
+    class_counts = pd.Series(train_dataset['score']).value_counts().sort_index()
+    # Inverse frequency weighting
+    class_weights = (class_counts.sum() / (len(class_counts) * class_counts)).tolist()
+    print(f"Calculated Class Weights: {class_weights}")
 
-    # Create a timestamp for the run
+    # --- 2. Set up Training Arguments (needed for device info) ---
     timestamp = time.strftime("%m.%d-%H.%M")
-
-    # Set up training arguments
-    print("Setting up training arguments...")
+    output_dir = f'./results/{timestamp}'
     training_args = TrainingArguments(
+        output_dir=output_dir,
         eval_strategy=evaluation_strategy,
         save_strategy=save_strategy,
         save_total_limit=2,
         eval_steps=eval_steps,
-        save_steps=50,
+        save_steps=eval_steps,
         logging_steps=50,
         learning_rate=learning_rate,
         num_train_epochs=num_train_epochs,
         seed=42,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_eval_batch_size,
-        eval_on_start=False,
         load_best_model_at_end=True,
         metric_for_best_model="f1_macro",
         greater_is_better=True,
         bf16=False,
     )
 
-    # Initialize trainer
-    print("Initializing Trainer...")
+    # --- 3. Define the Custom Loss Function using a Closure ---
+    # We define it here to "capture" the class_weights variable.
+    # The Trainer will handle moving the weights tensor to the correct device.
+    class_weights_tensor = torch.tensor(class_weights, device=training_args.device)
+
+    def cdw_ce_loss_func(outputs, labels, num_items_in_batch=None):
+        """
+        Custom loss function for Class-Distribution-Weighted Cross-Entropy.
+        This function signature matches what `Trainer.compute_loss` expects.
+        """
+        # Extract logits from the model outputs
+        logits = outputs.get("logits")
+        # Define the standard Cross-Entropy loss function, but with our calculated weights
+        loss_fct = nn.CrossEntropyLoss(weight=class_weights_tensor)
+        # Compute the loss
+        loss = loss_fct(logits.view(-1, 5), labels.view(-1))
+        return loss
+
+    # --- 4. Configure Model for CLASSIFICATION ---
+    print("Loading model for CLASSIFICATION...")
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_name,
+        num_labels=5,  # 5 classes for classification (0-4)
+        problem_type="single_label_classification",
+    )
+
+    print("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
+
+    # Process datasets
+    train_dataset = train_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
+    val_dataset = val_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    print("Freezing base model parameters...")
+    for param in model.base_model.parameters():
+        param.requires_grad = False
+    print("Base model parameters frozen.")
+    
+    # --- 5. Initialize the standard Trainer with the custom loss function ---
+    print("Initializing Trainer with custom CDW-CE loss function...")
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -129,9 +143,9 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         tokenizer=tokenizer, 
         data_collator=data_collator, 
         compute_metrics=compute_metrics,
+        compute_loss_func=cdw_ce_loss_func, # Pass the custom function here
     )
 
-    # Print configuration and dataset info
     print("Configuration:")
     for key, value in config.items():
         print(f"  {key}: {value}")
@@ -140,18 +154,15 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     print(f"Validation samples: {len(val_dataset)}")
     print("-" * 20)
 
-    # Train the model
     print("Starting training…")
-    train_result = trainer.train()
+    trainer.train()
     print("Training complete.")
 
-    # Evaluate the model
     print("Evaluating on validation set…")
     eval_metrics = trainer.evaluate()
     print(f"Validation metrics: {eval_metrics}")
 
-    # Save the model
-    model_save_name = f"{model_name[:4]}_Danish={num_danish_samples}_{timestamp}" 
+    model_save_name = f"{model_name.split('/')[-1][:4]}_Danish={num_danish_samples}_{timestamp}_CDW-CE"
     final_model_save_path = os.path.join(model_dir, model_save_name)
     print(f"Saving model to {final_model_save_path}...")
     os.makedirs(final_model_save_path, exist_ok=True)
@@ -166,15 +177,12 @@ def main(val_split, model_name, model_dir, num_danish_samples,
 
 
 if __name__ == "__main__":
-    # Parse command line arguments to allow for different config files
     config_path = "training/config/base.yaml"
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
     
-    # Load configuration
     config = load_config(config_path)
     
-    # Extract config parameters here in __main__
     val_split = config.get("val_split", 0.1)
     model_name = config["model_name"]
     model_dir = config["model_dir"]
@@ -188,8 +196,7 @@ if __name__ == "__main__":
     save_strategy = config.get("save_strategy", "steps")
     eval_steps = config.get("eval_steps", 50)
     
-    # Run main training function with extracted parameters
-    trainer, metrics = main(
+    main(
         val_split, model_name, model_dir, num_danish_samples,
         num_english_samples, learning_rate, num_train_epochs,
         per_device_train_batch_size, per_device_eval_batch_size,
