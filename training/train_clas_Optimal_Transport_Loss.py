@@ -56,15 +56,16 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     )
     # This remains a 5-class problem
     num_classes = 5
-    dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(num_classes)]))
-    
-    dataset = dataset.train_test_split(
+
+    print("Splitting dataset before casting column type...")
+    dataset_split = dataset.train_test_split(
         train_size=1 - val_split, seed=42, stratify_by_column="score"
     )
-    
-    train_dataset = dataset["train"]
-    val_dataset = dataset["test"]
 
+    # 2. NOW, cast the 'score' column to ClassLabel in both the train and test splits.
+    print("Casting 'score' column to ClassLabel in both splits...")
+    train_dataset = dataset_split["train"].cast_column("score", ClassLabel(names=[str(i) for i in range(num_classes)]))
+    val_dataset = dataset_split["test"].cast_column("score", ClassLabel(names=[str(i) for i in range(num_classes)]))
     # --- 1. Define the Ordinal Optimal Transport Loss Function ---
     def ordinal_ot_loss_func(outputs, labels, num_items_in_batch=None):
         """
