@@ -34,7 +34,7 @@ def compute_metrics(eval_pred):
 
     target_names = ["None", "Minimal", "Basic", "Good", "Excellent"]
 
-    report = classification_report(labels, preds, target_names=target_names, zero_division=0)
+    report = classification_report(labels, preds, target_names=target_names, labels=list(range(5)), zero_division=0)
     cm = confusion_matrix(labels, preds)
 
     print("Classification Report:\n" + report)
