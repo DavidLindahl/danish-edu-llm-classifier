@@ -78,7 +78,7 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     )
 
     print("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # Process dataset
     dataset = dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
@@ -93,28 +93,47 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         param.requires_grad = False
     print("Base model parameters frozen.")
 
+    # Ensure the classifier head is trainable
+    print("Ensuring classifier head parameters are trainable...")
+    for param in model.classifier.parameters():
+        param.requires_grad = True
+    print("Classifier head parameters ensured trainable.")
+
+
     # Create a timestamp for the run
     timestamp = time.strftime("%m.%d-%H.%M")
+
+    run_name = f"Danish_{num_danish_samples}_{timestamp}"
+
 
     # Set up training arguments
     print("Setting up training arguments...")
     training_args = TrainingArguments(
+        # --- Training Parameters ---
+        learning_rate=learning_rate,
+        num_train_epochs=num_train_epochs,
+        per_device_train_batch_size=per_device_train_batch_size,
+        per_device_eval_batch_size=per_device_eval_batch_size,
+
+        # --- Learning Rate Scheduling ---
+        lr_scheduler_type="linear", # Added: Linear scheduler
+        warmup_ratio=0.1, # Added: 10% of steps for warmup
+
+        # --- Evaluation and Logging ---
         eval_strategy=evaluation_strategy,
         save_strategy=save_strategy,
         save_total_limit=2,
         eval_steps=eval_steps,
-        save_steps=50,
-        logging_steps=50,
-        learning_rate=learning_rate,
-        num_train_epochs=num_train_epochs,
-        seed=42,
-        per_device_train_batch_size=per_device_train_batch_size,
-        per_device_eval_batch_size=per_device_eval_batch_size,
-        eval_on_start=False,
+        eval_on_start=True, # Changed to True for baseline eval
         load_best_model_at_end=True,
-        metric_for_best_model="f1_macro",
-        greater_is_better=True,
-        bf16=False,
+        metric_for_best_model="eval_mse_loss", # Changed to eval_mse_loss
+        greater_is_better=False, # Changed to False for loss
+        
+        # --- Mixed Precision ---
+        fp16=True, # Changed to True for V100 as per PDF
+    
+        # --- Other parameters ---
+        seed=42,
     )
 
     # Initialize trainer
@@ -163,6 +182,7 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     return trainer, eval_metrics
 
 
+
 if __name__ == "__main__":
     # Parse command line arguments to allow for different config files
     config_path = "training/config/fewshot.yaml"
@@ -170,27 +190,54 @@ if __name__ == "__main__":
         config_path = sys.argv[1]
     
     # Load configuration
-    config = load_config(config_path)
+    base_config = load_config(config_path) # Renamed to base_config
+
+    # Define few-shot sample sizes
+    # These are the N Danish samples you add for fine-tuning
+    few_shot_danish_samples = [50, 100, 200, 500, 1000, 2500, 5000]
     
-    # Extract config parameters here in __main__
-    val_split = config.get("val_split", 0.1)
-    model_name = config["model_name"]
-    model_dir = config["model_dir"]
-    num_danish_samples = config.get("num_danish_samples", 0)
-    num_english_samples = config.get("num_english_samples", 0)
-    learning_rate = float(config.get("learning_rate", 3e-4))
-    num_train_epochs = config.get("num_train_epochs", 3)
-    per_device_train_batch_size = config.get("per_device_train_batch_size", 16)
-    per_device_eval_batch_size = config.get("per_device_eval_batch_size", 32)
-    evaluation_strategy = config.get("evaluation_strategy", "steps")
-    save_strategy = config.get("save_strategy", "steps")
-    eval_steps = config.get("eval_steps", 50)
-    
-    # Run main training function with extracted parameters
-    trainer, metrics = main(
-        val_split, model_name, model_dir, num_danish_samples,
-        num_english_samples, learning_rate, num_train_epochs,
-        per_device_train_batch_size, per_device_eval_batch_size,
-        evaluation_strategy, eval_steps, save_strategy,
-        config
-    )
+    all_results = {}
+
+    for dan_samples in few_shot_danish_samples:
+        print(f"\n--- Starting training for {dan_samples} Danish samples ---")
+        
+        # Create a mutable config for the current run
+        current_config = base_config.copy()
+
+        # If dan_samples is 5000, train on the XLM-RoBERTa base model
+        if dan_samples == 5000:
+            current_config["model_name"] = "FacebookAI/xlm-roberta-base"
+
+        current_config["num_danish_samples"] = dan_samples
+        current_config["num_english_samples"] = 0 # Explicitly set to 0 as per few-shot strategy
+
+        # Extract config parameters for the current run
+        val_split = current_config.get("val_split", 0.1)
+        model_name = current_config["model_name"] # This is your English-trained model
+        model_dir = current_config["model_dir"]
+        num_danish_samples = current_config.get("num_danish_samples", 0)
+        num_english_samples = current_config.get("num_english_samples", 0)
+        learning_rate = float(current_config.get("learning_rate", 3e-4))
+        num_train_epochs = current_config.get("num_train_epochs", 7) # Increased default epochs
+        per_device_train_batch_size = current_config.get("per_device_train_batch_size", 16)
+        per_device_eval_batch_size = current_config.get("per_device_eval_batch_size", 32)
+        evaluation_strategy = current_config.get("evaluation_strategy", "steps") # Use steps
+        save_strategy = current_config.get("save_strategy", "steps") # Use steps
+        # eval_steps is not used with epoch strategy, no need to extract
+        
+        # Run main training function with extracted parameters
+        trainer, metrics = main(
+            val_split, model_name, model_dir, num_danish_samples,
+            num_english_samples, learning_rate, num_train_epochs,
+            per_device_train_batch_size, per_device_eval_batch_size,
+            evaluation_strategy, save_strategy, # Pass without eval_steps
+            current_config # Pass the current config for logging/callbacks
+        )
+        if metrics:
+            all_results[f"Danish_{dan_samples}_samples"] = metrics
+            print(f"Results for {dan_samples} samples: {metrics}")
+        
+    print("\n--- All few-shot training runs complete ---")
+    print("Summary of all results:")
+    for size, res in all_results.items():
+        print(f"{size}: {res}")
