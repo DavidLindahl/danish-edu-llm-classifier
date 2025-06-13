@@ -49,6 +49,11 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         danish_data_amount=num_danish_samples,
     )
 
+    df = get_merged_dataset(
+        english_data_amount=num_english_samples,
+        danish_data_amount=num_danish_samples,
+    )
+
     # df = pd.read_csv("data/english_fineweb_merged_data.csv") 
     # df = df.sample(100, random_state=42)  # For testing, use a smaller sample
     print(f"Loaded dataset with {len(df)} samples.")
@@ -101,21 +106,26 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     # Set up training arguments
     print("Setting up training arguments...")
     training_args = TrainingArguments(
+        # --- Training Parameters ---
+        learning_rate=learning_rate,
+        num_train_epochs=num_train_epochs,
+        per_device_train_batch_size=per_device_train_batch_size,
+        per_device_eval_batch_size=per_device_eval_batch_size,
+
+        # --- Evaluation and Logging ---
         eval_strategy=evaluation_strategy,
         save_strategy=save_strategy,
         save_total_limit=2,
         eval_steps=eval_steps,
         save_steps=50,
         logging_steps=50,
-        learning_rate=learning_rate,
-        num_train_epochs=num_train_epochs,
-        seed=42,
-        per_device_train_batch_size=per_device_train_batch_size,
-        per_device_eval_batch_size=per_device_eval_batch_size,
         eval_on_start=False,
         load_best_model_at_end=True,
         metric_for_best_model="f1_macro",
         greater_is_better=True,
+
+        # --- other parameters ---
+        seed=42,
         bf16=False,
     )
 

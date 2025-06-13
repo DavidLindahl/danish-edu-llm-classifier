@@ -5,5 +5,10 @@ test_length_df.ipynb
 .DS_Store
 venv/
 wandb/
+
+# all ssh HPC files
+*.err
+*.out
+*.sh
 models/
 trainer_output/
