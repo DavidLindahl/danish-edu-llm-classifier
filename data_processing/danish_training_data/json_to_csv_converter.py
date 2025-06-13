@@ -40,6 +40,6 @@ def convert_json_to_csv(json_path: str, csv_path: str):
 
 
 if __name__ == "__main__":
-    json_path = "data/danish_filtered_labelled_data.json"
-    output_path = "data/danish_filtered_labelled_data.csv"
+    json_path = "data/interim/danish_filtered_labelled_data.json"
+    output_path = "data/processed/danish_filtered_labelled_data.csv"
     convert_json_to_csv(json_path, output_path)

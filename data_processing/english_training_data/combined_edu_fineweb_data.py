@@ -30,9 +30,9 @@ HF_CONFIG_SCORE_2 = "CC-MAIN-2024-18"
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
 
 # Path to locally classified FineWeb samples
-LOCAL_CSV_PATH = os.path.join(BASE_DIR, "english_classified_samples.csv")
+LOCAL_CSV_PATH = os.path.join(BASE_DIR, "/interim/english_classified_samples.csv")
 # Output path for the merged, balanced dataset
-OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "english_fineweb_merged_data.csv")
+OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "/processed/english_fineweb_merged_data.csv")
 
 COMMON_COLUMNS = ["text", "language_score", "token_count", "int_score"]
 
