@@ -189,7 +189,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--test_data_path",
-        default = "data/danish_filtered_labelled_data.csv",
+        default = "self_annotation/test_uCarl.csv",
         type=str,
         help= "Path to you test data CSV file. The CSV must contain 'text' and 'int_score' columns."
     )
