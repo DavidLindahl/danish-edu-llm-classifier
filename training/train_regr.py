@@ -49,6 +49,11 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         danish_data_amount=num_danish_samples,
     )
 
+    df = get_merged_dataset(
+        english_data_amount=num_english_samples,
+        danish_data_amount=num_danish_samples,
+    )
+
     # df = pd.read_csv("data/english_fineweb_merged_data.csv") 
     # df = df.sample(100, random_state=42)  # For testing, use a smaller sample
     print(f"Loaded dataset with {len(df)} samples.")
