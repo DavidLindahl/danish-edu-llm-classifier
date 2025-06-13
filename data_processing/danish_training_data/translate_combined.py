@@ -3,6 +3,8 @@ import torch
 from transformers import MarianMTModel, MarianTokenizer
 from tqdm import tqdm
 import os
+import torch_xla
+import torch_xla.core.xla_model as xm
 
 # --- Configuration ---
 MODEL_NAME = "Helsinki-NLP/opus-mt-en-da"
@@ -64,10 +66,12 @@ def main():
     """
     Main function to orchestrate the CSV translation process.
     """
-    # --- 1. Setup Environment ---
-    # Use GPU if available, otherwise fall back to CPU
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    print(f"Using device: {device}")
+    # --- 1. Setup Environment for TPU ---
+
+
+    # This is the magic command that finds and initializes the Colab TPU
+    device = xm.xla_device()
+    print(f"Successfully connected to TPU device: {device}")
 
     # --- 2. Load Model and Tokenizer ---
     print(f"Loading model and tokenizer: {MODEL_NAME}")
@@ -112,6 +116,9 @@ def main():
     print(f"Saving translated data to: {OUTPUT_CSV_PATH}")
     # Use 'utf-8-sig' to ensure Danish characters are handled correctly, especially in Excel
     df.to_csv(OUTPUT_CSV_PATH, index=False, encoding='utf-8-sig')
+    # --- Add this line before the final print statements ---
+    # This waits for all asynchronous operations on the TPU to complete.
+    xm.wait_for_devices()
 
     print("\nTranslation complete!")
     print(f"Output file created at: {OUTPUT_CSV_PATH}")
