@@ -14,4 +14,4 @@ learning_rate: 3e-4
 
 # Danish/English data selection for merging
 num_danish_samples: 0      # Number of Danish samples to include
-num_english_samples: 5000       # Number of English samples to include)
+num_english_samples: 500       # Number of English samples to include)

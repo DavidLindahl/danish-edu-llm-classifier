@@ -4,6 +4,7 @@ import os
 import numpy as np
 import time
 import pandas as pd
+import torch
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -15,6 +16,7 @@ from datasets import Dataset, ClassLabel
 import yaml
 import torch.nn as nn
 from metrics import compute_metrics
+from transformers import PretrainedConfig
 
 # path setup to import data processing module
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -36,6 +38,36 @@ def preprocess(examples, tokenizer):
     batch = tokenizer(examples["text"], truncation=True)
     batch["labels"] = np.float32(examples["score"]) 
     return batch
+
+
+class SimpleNNConfig(PretrainedConfig):
+    def __init__(self, input_size=768, hidden_size=128, num_labels=1, **kwargs):
+        super().__init__(**kwargs)
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_labels = num_labels
+
+class SimpleRegressionNN(PreTrainedModel):
+    config_class = SimpleNNConfig
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.fc1 = nn.Linear(config.input_size, config.hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(config.hidden_size, config.num_labels)
+
+    def forward(self, input_ids=None, labels=None, **kwargs):
+        # input_ids: (batch_size, input_size)
+        x = self.fc1(input_ids.float())  # Ensure input is float for MPS/Linear
+        x = self.relu(x)
+        logits = self.fc2(x)
+
+        loss = None
+        if labels is not None:
+            loss_fn = nn.MSELoss()
+            loss = loss_fn(logits.squeeze(), labels.squeeze())
+
+        return {"loss": loss, "logits": logits}
 
 
 def main(val_split, model_name, model_dir, num_danish_samples, 
@@ -79,15 +111,8 @@ def main(val_split, model_name, model_dir, num_danish_samples,
 
     # Load model and tokenizer
     print("Loading model...")
-
-
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_name,
-        num_labels=1, # 1 output neuron for regression
-        classifier_dropout=0.0,
-        hidden_dropout_prob=0.0,
-        output_hidden_states=False
-        )
+    configs = SimpleNNConfig(input_size=512, hidden_size=128, num_labels=1)
+    model = SimpleRegressionNN(configs)
 
     print("Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
@@ -126,7 +151,7 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         logging_steps=50,
         eval_on_start=False,
         load_best_model_at_end=True,
-        metric_for_best_model="mse",
+        metric_for_best_model="f1_macro",
         greater_is_better=True,
 
         # --- other parameters ---
