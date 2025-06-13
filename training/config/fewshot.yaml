@@ -1,4 +1,5 @@
 model_name: "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot"
+# model_name: "Leng2beat/fineweb-edu-english-classifier-base"
 num_labels: 1  # Regression head
 
 model_dir: "models"

@@ -1,14 +1,8 @@
 """Training script for the Danish educational score model."""
-
 import sys
 import os
-
 import numpy as np
-from sklearn.metrics import classification_report, confusion_matrix
-import evaluate
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
+import time
 import pandas as pd
 from transformers import (
     AutoTokenizer,
@@ -17,164 +11,204 @@ from transformers import (
     Trainer,
     DataCollatorWithPadding,
 )
-
 from datasets import Dataset, ClassLabel
-
 import yaml
+
+from metrics import compute_metrics
+from utils import set_seed
+
+# path setup to import data processing module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from data_processing.data_process import get_merged_dataset
 
-# Load config
-print("Loading config...")
-with open("training/config/base.yaml", "r") as f:
-    config = yaml.safe_load(f)
+seed_ = 42
+set_seed(seed_)  # Set random seed for reproducibility
 
-val_split = 0.1  # Proportion of data to use for validation
-
-model_name = config["model_name"]
-model_dir = config["model_dir"]
-results_dir = config["results_dir"]
-num_labels = config.get("num_labels", 1)
-
-num_danish_samples = config["num_danish_samples"]  # Number of Danish samples to include
-num_english_samples = config["num_english_samples"]  # Number of English samples to include
-
-learning_rate = config.get("learning_rate", 2e-5)
+def load_config(config_path):
+    """Load configuration from YAML file."""
+    print(f"Loading config from {config_path}...")
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
 
 
-
-
-
-# Load data
-print(
-    f"Loading {num_english_samples} English and {num_danish_samples} Danish samples..."
-)
-df = get_merged_dataset(
-    english_data_amount=num_english_samples,
-    danish_data_amount=num_danish_samples,
-)
-print(f"Loaded dataset with {len(df)} samples.")
-
-# Convert to Hugging Face dataset
-dataset = Dataset.from_pandas(df[["text", "score"]])
-dataset = dataset.map(
-    lambda x: {"score": int(np.clip(round(float(x["score"])), 0, 5))}
-)
-dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(6)]))
-dataset = dataset.train_test_split(
-    train_size=1 - val_split, seed=42, stratify_by_column="score"
-)
-
-print("Loading tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-
-def preprocess(examples):
+def preprocess(examples, tokenizer):
+    """Preprocess examples by tokenizing text and converting scores to float."""
     batch = tokenizer(examples["text"], truncation=True)
-    batch["labels"] = np.array(examples["score"], dtype=np.float32)
+    batch["labels"] = np.float32(examples["score"]) 
     return batch
 
-dataset = dataset.map(preprocess, batched=True)
-data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-train_dataset = dataset["train"]
-val_dataset = dataset["test"]
+def main(val_split, model_name, model_dir, num_danish_samples, 
+         num_english_samples, learning_rate, num_train_epochs, 
+         per_device_train_batch_size, per_device_eval_batch_size, 
+         evaluation_strategy, eval_steps, save_strategy, config):
+    """Main training function that handles the entire training pipeline."""
+    # All config parameters are now passed directly as arguments
 
-print("Loading model...")
-model = AutoModelForSequenceClassification.from_pretrained(
-    model_name, num_labels=num_labels, problem_type="regression"
-)
+    # Load data
+    print(f"Loading {num_english_samples} English and {num_danish_samples} Danish samples...")
+    df = get_merged_dataset(
+        english_data_amount=num_english_samples,
+        danish_data_amount=num_danish_samples,
+    )
 
-for param in model.base_model.parameters():
-    param.requires_grad = False
+    df = get_merged_dataset(
+        english_data_amount=num_english_samples,
+        danish_data_amount=num_danish_samples,
+    )
 
-print("Setting up training arguments...")
-training_args = TrainingArguments(
-    output_dir=model_dir,
-    num_train_epochs=config.get("num_train_epochs", 3),
-    per_device_train_batch_size=config.get("per_device_train_batch_size", 8),
-    per_device_eval_batch_size=config.get("per_device_eval_batch_size", 8),
-    learning_rate=learning_rate,
-    weight_decay=config.get("weight_decay", 0.01),
-    eval_strategy=config.get("evaluation_strategy", "epoch"),
-    logging_strategy=config.get("logging_strategy", "epoch"),
-    save_strategy=config.get("save_strategy", "epoch"),
-    logging_first_step=True,
-    logging_dir=os.path.join(results_dir, "logs"),
-    report_to="wandb",
-    run_name="danish-edu-llm-run",
-)
+    # df = pd.read_csv("data/english_fineweb_merged_data.csv") 
+    # df = df.sample(100, random_state=42)  # For testing, use a smaller sample
+    print(f"Loaded dataset with {len(df)} samples.")
+
+    # Convert to Hugging Face dataset
+    dataset = Dataset.from_pandas(df[["text", "int_score"]])
+
+    # Ensure score is an integer between 0 and 4
+    dataset = dataset.map(
+        lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))}
+    )
+
+    # Cast to ClassLabel for stratification
+    dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
+
+    # Split dataset
+    dataset = dataset.train_test_split(
+        train_size=1 - val_split, seed=42, stratify_by_column="score"
+    )
+
+    # Load model and tokenizer
+    print("Loading model...")
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_name,
+        num_labels=1,  # 1 output neuron for regression
+        classifier_dropout=0.0,
+        hidden_dropout_prob=0.0, 
+        output_hidden_states=False 
+    )
+
+    print("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    # Process dataset
+    dataset = dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    train_dataset = dataset["train"]
+    val_dataset = dataset["test"]
+
+    # Freeze base model parameters
+    print("Freezing base model parameters...")
+    for param in model.base_model.parameters():
+        param.requires_grad = False
+    print("Base model parameters frozen.")
+
+    # Create a timestamp for the run
+    timestamp = time.strftime("%m.%d-%H.%M")
+
+    # Set up training arguments
+    print("Setting up training arguments...")
+    training_args = TrainingArguments(
+        # --- Training Parameters ---
+        learning_rate=learning_rate,
+        num_train_epochs=num_train_epochs,
+        per_device_train_batch_size=per_device_train_batch_size,
+        per_device_eval_batch_size=per_device_eval_batch_size,
+
+        # --- Learning Rate Scheduling ---
+        lr_scheduler_type="linear", # or "cosine"
+        warmup_ratio=0.1, # 10% of training steps used for linear warmup
 
 
-def compute_metrics(eval_pred):
-    """Compute precision, recall, F1 and accuracy."""
+        # --- Evaluation and Logging ---
+        eval_strategy=evaluation_strategy,
+        save_strategy=save_strategy,
+        save_total_limit=2,
+        eval_steps=eval_steps,
+        logging_steps=50,
+        eval_on_start=True, # Baseline
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
 
-    logits, labels = eval_pred
-    preds = np.round(logits.squeeze()).clip(0, 5).astype(int)
-    labels = np.round(labels.squeeze()).astype(int)
+        # --- other parameters ---
+        seed=seed_,
+        bf16=True,
+    )
 
-    precision_metric = evaluate.load("precision")
-    recall_metric = evaluate.load("recall")
-    f1_metric = evaluate.load("f1")
-    accuracy_metric = evaluate.load("accuracy")
+    # Initialize trainer
+    print("Initializing Trainer...")
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
+        tokenizer=tokenizer, 
+        data_collator=data_collator, 
+        compute_metrics=compute_metrics,
+    )
 
-    precision = precision_metric.compute(
-        predictions=preds, references=labels, average="macro"
-    )["precision"]
-    recall = recall_metric.compute(
-        predictions=preds, references=labels, average="macro"
-    )["recall"]
-    f1 = f1_metric.compute(predictions=preds, references=labels, average="macro")[
-        "f1"
-    ]
-    accuracy = accuracy_metric.compute(predictions=preds, references=labels)[
-        "accuracy"
-    ]
+    # Print configuration and dataset info
+    print("Configuration:")
+    for key, value in config.items():
+        print(f"  {key}: {value}")
+    print("-" * 20)
+    print(f"Train samples: {len(train_dataset)}")
+    print(f"Validation samples: {len(val_dataset)}")
+    print("-" * 20)
 
-    report = classification_report(labels, preds)
-    cm = confusion_matrix(labels, preds)
-    print("Validation Report:\n" + report)
-    print("Confusion Matrix:\n" + str(cm))
-
-    return {
-        "precision": precision,
-        "recall": recall,
-        "f1_macro": f1,
-        "accuracy": accuracy,
-    }
-
-
-print("Initializing Trainer...")
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=val_dataset,
-    compute_metrics=compute_metrics,
-)
-
-if __name__ == "__main__":
-    # 1. Print config & splits (sanity checks)
-    # 2. Initialize tokenizer, datasets, model (with problem_type="regression")
-    # 3. Build TrainingArguments (with logging_strategy="epoch")
-    # 4. Create Trainer (with compute_metrics)
+    # Train the model
     print("Starting training…")
     train_result = trainer.train()
     print("Training complete.")
 
+    # Evaluate the model
     print("Evaluating on validation set…")
     eval_metrics = trainer.evaluate()
     print(f"Validation metrics: {eval_metrics}")
 
-    # save model in the model directory
-    # save to model to the "model_dir+model_weights" directory
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-    model_dir = os.path.join(model_dir, "model_weights")
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-
-    print("Saving model...")
-    trainer.save_model(model_dir)
-    print(f"Model saved to {model_dir}")
+    # Save the model
+    model_save_name = f"{model_name[:4]}_Danish={num_danish_samples}_{timestamp}" 
+    final_model_save_path = os.path.join(model_dir, model_save_name)
+    print(f"Saving model to {final_model_save_path}...")
+    os.makedirs(final_model_save_path, exist_ok=True)
+    trainer.save_model(final_model_save_path)
+    tokenizer.save_pretrained(final_model_save_path)
+    trainer.state.save_to_json(os.path.join(final_model_save_path, "trainer_state.json"))
+    
     print("Training and evaluation complete.")
     print("Done.")
+    
+    return trainer, eval_metrics
+
+
+if __name__ == "__main__":
+    # Parse command line arguments to allow for different config files
+    config_path = "training/config/base.yaml"
+    if len(sys.argv) > 1:
+        config_path = sys.argv[1]
+    
+    # Load configuration
+    config = load_config(config_path)
+    
+    # Extract config parameters here in __main__
+    val_split = config.get("val_split", 0.1)
+    model_name = config["model_name"]
+    model_dir = config["model_dir"]
+    num_danish_samples = config.get("num_danish_samples", 0)
+    num_english_samples = config.get("num_english_samples", 0)
+    learning_rate = float(config.get("learning_rate", 3e-4))
+    num_train_epochs = config.get("num_train_epochs", 3)
+    per_device_train_batch_size = config.get("per_device_train_batch_size", 16)
+    per_device_eval_batch_size = config.get("per_device_eval_batch_size", 32)
+    evaluation_strategy = config.get("evaluation_strategy", "steps")
+    save_strategy = config.get("save_strategy", "steps")
+    eval_steps = config.get("eval_steps", 50)
+    
+    # Run main training function with extracted parameters
+    trainer, metrics = main(
+        val_split, model_name, model_dir, num_danish_samples,
+        num_english_samples, learning_rate, num_train_epochs,
+        per_device_train_batch_size, per_device_eval_batch_size,
+        evaluation_strategy, eval_steps, save_strategy,
+        config
+    )
