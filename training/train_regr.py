@@ -85,7 +85,7 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     )
 
     print("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # Process dataset
     dataset = dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
@@ -112,21 +112,24 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_eval_batch_size,
 
+        # --- Learning Rate Scheduling ---
+        lr_scheduler_type="linear", # or "cosine"
+        warmup_ratio=0.1, # 10% of training steps used for linear warmup
+
+
         # --- Evaluation and Logging ---
         eval_strategy=evaluation_strategy,
         save_strategy=save_strategy,
         save_total_limit=2,
         eval_steps=eval_steps,
-        save_steps=50,
         logging_steps=50,
-        eval_on_start=False,
+        eval_on_start=True, # Baseline
         load_best_model_at_end=True,
-        metric_for_best_model="f1_macro",
-        greater_is_better=True,
+        metric_for_best_model="eval_loss",
 
         # --- other parameters ---
         seed=42,
-        bf16=False,
+        bf16=True,
     )
 
     # Initialize trainer
