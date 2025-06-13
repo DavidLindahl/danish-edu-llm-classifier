@@ -30,9 +30,9 @@ HF_CONFIG_SCORE_2 = "CC-MAIN-2024-18"
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
 
 # Path to locally classified FineWeb samples
-LOCAL_CSV_PATH = os.path.join(BASE_DIR, "english_classified_samples_5000.csv")
+LOCAL_CSV_PATH = os.path.join(BASE_DIR, "english_classified_samples_10000.csv")
 # Output path for the merged, balanced dataset
-OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "english_fineweb_merged_data.csv")
+OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "english_fineweb_merged_data_1000.csv")
 
 COMMON_COLUMNS = ["text", "language_score", "token_count", "int_score"]
 
@@ -153,7 +153,7 @@ def save_to_csv(df: pd.DataFrame, filename: str = OUTPUT_CSV_PATH) -> None:
     print(f"Saved merged dataset to {filename}")
 
 
-def limit_int_score_1_2_3(df: pd.DataFrame, N_1: int, N_2: int, N_3: int) -> pd.DataFrame:
+def limit_int_score_1_2_3(df: pd.DataFrame, N_0: int,  N_1: int, N_2: int, N_3: int, N_4: int) -> pd.DataFrame:
     """
     Limit the number of samples with int_score == 1, 2, and 3 to N_1, N_2, and N_3 respectively.
     All other int_score classes (0, 4, 5) are unchanged.
@@ -174,18 +174,28 @@ def limit_int_score_1_2_3(df: pd.DataFrame, N_1: int, N_2: int, N_3: int) -> pd.
     pd.DataFrame
         DataFrame with limited samples for int_score 1, 2, and 3.
     """
+    df_0 = df[df["int_score"] == 0].head(N_0)
     df_1 = df[df["int_score"] == 1].head(N_1)
     df_2 = df[df["int_score"] == 2].head(N_2)
     df_3 = df[df["int_score"] == 3].head(N_3)
-    df_rest = df[df["int_score"].isin([0, 4, 5])]
-    result = pd.concat([df_rest, df_1, df_2, df_3], ignore_index=True)
+    df_4 = df[df["int_score"] == 4].head(N_4)
+    df_rest = df[df["int_score"].isin([5])]
+    result = pd.concat([df_rest, df_0, df_1, df_2, df_3, df_4], ignore_index=True)
     return result
 
 
 if __name__ == "__main__":
-    merged_df = load_and_process_dataset()
+    num_samples_score_3 =  8_000
+    num_samples_score_2 = 2_500
+    num_samples_csv = 10_000
+
+    merged_df = load_and_process_dataset(
+        num_samples_score_3=num_samples_score_3,
+        num_samples_score_2=num_samples_score_2,
+        num_samples_csv=num_samples_csv
+    )
     # Limit int_score 1, 2, and 3 to 1000 samples each
-    merged_df = limit_int_score_1_2_3(merged_df, N_1=1000, N_2=1000, N_3=1000)
+    merged_df = limit_int_score_1_2_3(merged_df, N_0=1000, N_1=1000, N_2=1000, N_3=1000, N_4=1000)
     plot_score_distribution(merged_df)
     save_to_csv(merged_df)
 
