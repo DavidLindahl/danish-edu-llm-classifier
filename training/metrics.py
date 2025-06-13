@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error
 import evaluate
 
 
@@ -31,6 +31,7 @@ def compute_metrics(eval_pred):
     accuracy = accuracy_metric.compute(
         predictions=preds, references=labels)["accuracy"]
 
+    mse_score = mean_squared_error(labels, preds)
 
     target_names = ["None", "Minimal", "Basic", "Good", "Excellent"]
 
@@ -46,4 +47,5 @@ def compute_metrics(eval_pred):
         "f1_macro": f1,
         "accuracy": accuracy,
         "classification_report": report,
+        "mse": mse_score,
     }
