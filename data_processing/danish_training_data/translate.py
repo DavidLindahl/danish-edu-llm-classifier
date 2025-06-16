@@ -9,7 +9,7 @@ import os
 # --- Configuration ---
 MODEL_NAME = "Helsinki-NLP/opus-mt-en-da"
 INPUT_CSV_PATH = "data/danish_pretranslate.csv"
-OUTPUT_CSV_PATH = "data/danish_train.csv"
+OUTPUT_CSV_PATH = "data/processed/danish_train.csv"
 TEXT_COLUMN_NAME = "tran_text"
 BATCH_SIZE = 32 
 
