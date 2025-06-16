@@ -12,7 +12,7 @@ import krippendorff
 # --- Configuration ---
 MODEL_PREDICTIONS_CSV = "test/test_results_with_predictions.csv"
 GEMINI_PREDICTIONS_CSV = "eval/gemini_predictions.csv"
-HUMAN_ANNOTATIONS_JSON = "self_annotation/annotations_david.json"
+HUMAN_ANNOTATIONS_JSON = "self_annotation/annotations_mikkel.json"
 GOLD_STANDARD_CSV = "self_annotation/test_final.csv" # The new ground truth
 SCORE_MAPPING = {'None': 0, 'Minimal': 1, 'Basic': 2, 'Good': 3, 'Excellent': 4}
 
@@ -22,6 +22,12 @@ SUMMARY_TABLE_PATH = os.path.join(OUTPUT_DIR, "final_summary_table.csv")
 PERFORMANCE_PLOT_PATH = os.path.join(OUTPUT_DIR, "performance_curve.png")
 CONFUSION_MATRICES_PATH = os.path.join(OUTPUT_DIR, "confusion_matrices.png")
 DISTRIBUTION_PLOT_PATH = os.path.join(OUTPUT_DIR, "prediction_distribution.png")
+
+
+def _human_display_name(path: str) -> str:
+    base = os.path.basename(path)
+    name = base.split('_')[-1].split('.')[0]
+    return f"Human ({name.capitalize()})"
 
 
 def transform_wide_to_long(df_wide):
@@ -44,7 +50,7 @@ def transform_wide_to_long(df_wide):
 def plot_metrics_barchart(summary_df: pd.DataFrame):
     """
     x-axis = models · y-axis = metric scores · hue = metric name
-    Shows MSE, accuracy, F1-macro, F1-weighted, Krippendorff’s α.
+    Shows MSE, accuracy, F1-macro, F1-weighted, Krippendorff's α.
     """
     metrics_to_show = ['mse', 'accuracy', 'f1_macro', 'f1_weighted', 'alpha']
 
@@ -76,13 +82,13 @@ def plot_metrics_barchart(summary_df: pd.DataFrame):
     plt.show()
 
 
-def plot_confusion_matrices(master_df, summary_df):
+def plot_confusion_matrices(master_df, summary_df, human_model_name):
     best_fs_model_name = summary_df.loc[summary_df[summary_df['model_name'].str.contains('fewshot')]['f1_macro'].idxmax()]['model_name']
     models_to_plot = {
         "Zero-Shot": "xlm-roberta-danish-educational-scorer-zeroshot",
         f"Best Few-Shot ({best_fs_model_name.split('-')[-1]} samples)": best_fs_model_name,
         "Gemini 2.5 Flash": "Gemini 2.5 Flash",
-        "Human (David)": "Human (David)"
+        human_model_name: human_model_name
     }
     
     fig, axes = plt.subplots(2, 2, figsize=(12, 11))
@@ -147,6 +153,7 @@ if __name__ == "__main__":
     df_models_wide = pd.read_csv(MODEL_PREDICTIONS_CSV)
     df_gemini = pd.read_csv(GEMINI_PREDICTIONS_CSV)
     df_human = pd.read_json(HUMAN_ANNOTATIONS_JSON)
+    human_name = _human_display_name(HUMAN_ANNOTATIONS_JSON)
 
     # 2. Prepare and merge data into a single long-format DataFrame
     df_models_wide = df_models_wide.rename(columns={'int_score': 'true_label'})
@@ -157,7 +164,7 @@ if __name__ == "__main__":
 
     # Combine all annotators
     all_dfs = [master_df]
-    for df_annotator, name in [(df_gemini, "Gemini 2.5 Flash"), (df_human, "Human (David)")]:
+    for df_annotator, name in [(df_gemini, "Gemini 2.5 Flash"), (df_human, human_name)]:
         temp_df = df_true[['text', 'int_score']].rename(columns={'int_score': 'true_label'})
         temp_df = temp_df.merge(df_annotator[['text', 'final_prediction']], on='text', how='left')
         temp_df['model_name'] = name
@@ -198,7 +205,7 @@ if __name__ == "__main__":
 
     # 4. Generate and save all plots
     plot_metrics_barchart(summary_df)
-    plot_confusion_matrices(master_df, summary_df)
+    plot_confusion_matrices(master_df, summary_df, human_name)
     plot_prediction_distribution(master_df, df_true)
 
     print("\n--- Evaluation Complete ---")
