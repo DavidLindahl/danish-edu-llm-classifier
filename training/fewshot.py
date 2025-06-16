@@ -218,7 +218,7 @@ if __name__ == "__main__":
         num_danish_samples = current_config.get("num_danish_samples", 0)
         num_english_samples = current_config.get("num_english_samples", 0)
         learning_rate = float(current_config.get("learning_rate", 3e-4))
-        num_train_epochs = current_config.get("num_train_epochs", 7) # Increased default epochs
+        num_train_epochs = current_config.get("num_train_epochs", 3) # Increased default epochs
         per_device_train_batch_size = current_config.get("per_device_train_batch_size", 16)
         per_device_eval_batch_size = current_config.get("per_device_eval_batch_size", 32)
         evaluation_strategy = current_config.get("evaluation_strategy", "steps") # Use steps
