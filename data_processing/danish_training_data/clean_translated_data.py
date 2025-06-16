@@ -3,7 +3,7 @@ import os
 
 # --- Configuration ---
 INPUT_CSV_PATH = "data/danish_train.csv" # Adjust to your actual input file
-OUTPUT_CLEANED_CSV_PATH = "data/danish_train.csv"
+OUTPUT_CLEANED_CSV_PATH = "data/processed/danish_train.csv"
 
 
 if __name__ == "__main__":
