@@ -13,7 +13,7 @@ eval_steps: 10
 evaluation_strategy: "steps"
 logging_strategy: "steps"
 save_strategy: "steps"
-learning_rate: 3e-4
+learning_rate: 1e-5
 
 # Danish/English data selection for merging
 num_danish_samples: 0      # Number of Danish samples to include

@@ -1,0 +1,6 @@
+model_name,mse,accuracy,f1_macro,f1_weighted
+xlm-roberta-danish-educational-scorer-zeroshot,0.6408355832099915,0.51,0.37299578059071725,0.5101989150090415
+xlm-roberta-danish-educational-scorer-full-finetuning,0.777642011642456,0.41,0.29206931968072075,0.4392007695235315
+xlm-roberta-danish-educational-scorer-zeroshot-fewshot-2500,0.796271562576294,0.42,0.2921971595655807,0.43045112781954886
+xlm-roberta-danish-educational-scorer-zeroshot-fewshot-1000,0.7968878746032715,0.42,0.2921971595655807,0.43045112781954886
+xlm-roberta-danish-educational-scorer-zeroshot-fewshot-250,0.7384648323059082,0.44,0.30435222672064777,0.44300607287449395

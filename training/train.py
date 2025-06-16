@@ -129,7 +129,7 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         eval_on_start=True, # Baseline
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
-        use_mps_device=True
+        use_mps_device=True,
         # --- other parameters ---
         seed=seed_,
         bf16=False,
