@@ -10,7 +10,10 @@ from transformers import (
     TrainingArguments,
     Trainer,
     DataCollatorWithPadding,
+    
 )
+import wandb # <--- ADD THIS LINE
+
 from datasets import Dataset, ClassLabel
 import yaml
 
@@ -35,8 +38,8 @@ def preprocess(examples, tokenizer):
     return batch
 
 
-def main(val_split, model_name, model_dir, num_danish_samples, 
-         num_english_samples, learning_rate, num_train_epochs, 
+def main(val_split, model_name, hub_repo_id, num_danish_samples, 
+         num_english_samples, learning_rate, max_steps, 
          per_device_train_batch_size, per_device_eval_batch_size, 
          evaluation_strategy, eval_steps, save_strategy, config):
     """Main training function that handles the entire training pipeline."""
@@ -107,32 +110,43 @@ def main(val_split, model_name, model_dir, num_danish_samples,
 
 
     # Set up training arguments
+    output_dir = f"./results-temp/{hub_repo_id.split('/')[-1]}" # Temp dir for checkpoints
+
     print("Setting up training arguments...")
     training_args = TrainingArguments(
         # --- Training Parameters ---
         learning_rate=learning_rate,
-        num_train_epochs=num_train_epochs,
+        output_dir=output_dir, # <-- CHANGE to the new temp directory
+
+        max_steps=max_steps,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_eval_batch_size,
 
         # --- Learning Rate Scheduling ---
-        lr_scheduler_type="linear", # Added: Linear scheduler
-        warmup_ratio=0.1, # Added: 10% of steps for warmup
+        lr_scheduler_type="linear",
+        warmup_ratio=0.1,
 
         # --- Evaluation and Logging ---
         eval_strategy=evaluation_strategy,
         save_strategy=save_strategy,
         save_total_limit=2,
         eval_steps=eval_steps,
-        eval_on_start=True, # Changed to True for baseline eval
+        logging_steps=eval_steps, # <--- THIS IS THE CORRECTED LINE LOCATION
+        eval_on_start=True,
         load_best_model_at_end=True,
-        metric_for_best_model="eval_mse_loss", # Changed to eval_mse_loss
-        greater_is_better=False, # Changed to False for loss
-        
+        metric_for_best_model="eval_mse",
+        greater_is_better=False,
+        save_steps = eval_steps,  # Save every eval_steps
         # --- Mixed Precision ---
-        fp16=True, # Changed to True for V100 as per PDF
-    
-        # --- Other parameters ---
+        fp16=False,
+        use_mps_device=True,        
+        # --- Other parameters (including pushing to hub or not) ---
+        # Note: push_to_hub, hub_model_id, hub_strategy are not explicitly
+        # set here as this is for local saving in this specific version.
+        # If you want to push to hub, uncomment those lines from previous versions.
+        push_to_hub=True,
+        hub_model_id=hub_repo_id,
+        hub_strategy="end",        
         seed=42,
     )
 
@@ -158,24 +172,24 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     print("-" * 20)
 
     # Train the model
-    print("Starting training…")
+    print("Starting training...")
     train_result = trainer.train()
     print("Training complete.")
 
     # Evaluate the model
-    print("Evaluating on validation set…")
+    print("Evaluating on validation set...")
     eval_metrics = trainer.evaluate()
     print(f"Validation metrics: {eval_metrics}")
 
-    # Save the model
-    model_save_name = f"{model_name[:4]}_Danish={num_danish_samples}_{timestamp}" 
-    final_model_save_path = os.path.join(model_dir, model_save_name)
-    print(f"Saving model to {final_model_save_path}...")
-    os.makedirs(final_model_save_path, exist_ok=True)
-    trainer.save_model(final_model_save_path)
-    tokenizer.save_pretrained(final_model_save_path)
-    trainer.state.save_to_json(os.path.join(final_model_save_path, "trainer_state.json"))
-    
+    # # Save the model
+    # model_save_name = f"{model_name[:4]}_Danish={num_danish_samples}_{timestamp}" 
+    # final_model_save_path = os.path.join(model_dir, model_save_name)
+    # print(f"Saving model to {final_model_save_path}...")
+    # os.makedirs(final_model_save_path, exist_ok=True)
+    # trainer.save_model(final_model_save_path)
+    # tokenizer.save_pretrained(final_model_save_path)
+    # trainer.state.save_to_json(os.path.join(final_model_save_path, "trainer_state.json"))
+    trainer.push_to_hub()    
     print("Training and evaluation complete.")
     print("Done.")
     
@@ -184,58 +198,80 @@ def main(val_split, model_name, model_dir, num_danish_samples,
 
 
 if __name__ == "__main__":
-    # Parse command line arguments to allow for different config files
     config_path = "training/config/fewshot.yaml"
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
     
-    # Load configuration
-    base_config = load_config(config_path) # Renamed to base_config
-
-    # Define few-shot sample sizes
-    # These are the N Danish samples you add for fine-tuning
-    few_shot_danish_samples = [50, 100, 200, 500, 1000, 2500, 5000]
+    base_config = load_config(config_path)
+    hub_username = base_config.get("hub_username")
+    if not hub_username:
+        print("ERROR: 'hub_username' must be set in your config YAML file.")
+        exit()
+    # Define your few-shot sizes
+    few_shot_danish_samples = [250, 1000, 2500, 5000] # Adjust as needed
     
     all_results = {}
+    MAX_TRAINING_STEPS = 300  # A reasonable number for all few-shot runs
+    EVAL_STEPS = 30           # Evaluate 10 times during the training run
+    # Define a group name for this entire experiment in W&B
+    experiment_group_name = f"FewShot-Danish-{time.strftime('%m.%d')}"
 
     for dan_samples in few_shot_danish_samples:
         print(f"\n--- Starting training for {dan_samples} Danish samples ---")
         
-        # Create a mutable config for the current run
         current_config = base_config.copy()
-
-        # If dan_samples is 5000, train on the XLM-RoBERTa base model
+        current_config["num_danish_samples"] = dan_samples
+        # Your logic for few-shot vs full training
         if dan_samples == 5000:
             current_config["model_name"] = "FacebookAI/xlm-roberta-base"
+            current_config["num_english_samples"] = 0
 
-        current_config["num_danish_samples"] = dan_samples
-        current_config["num_english_samples"] = 0 # Explicitly set to 0 as per few-shot strategy
-
-        # Extract config parameters for the current run
+        # Extract config parameters
         val_split = current_config.get("val_split", 0.1)
-        model_name = current_config["model_name"] # This is your English-trained model
+        model_name = current_config["model_name"]
         model_dir = current_config["model_dir"]
         num_danish_samples = current_config.get("num_danish_samples", 0)
         num_english_samples = current_config.get("num_english_samples", 0)
         learning_rate = float(current_config.get("learning_rate", 3e-4))
-        num_train_epochs = current_config.get("num_train_epochs", 3) # Increased default epochs
+        num_train_epochs = current_config.get("num_train_epochs", 3)
         per_device_train_batch_size = current_config.get("per_device_train_batch_size", 16)
         per_device_eval_batch_size = current_config.get("per_device_eval_batch_size", 32)
-        evaluation_strategy = current_config.get("evaluation_strategy", "steps") # Use steps
-        save_strategy = current_config.get("save_strategy", "steps") # Use steps
-        # eval_steps is not used with epoch strategy, no need to extract
-        
-        # Run main training function with extracted parameters
+        evaluation_strategy = current_config.get("evaluation_strategy", "steps")
+        save_strategy = current_config.get("save_strategy", "steps")
+
+        # --- DYNAMICALLY CALCULATE EVAL_STEPS FOR 50 EVALUATIONS ---
+        total_train_samples = num_english_samples + num_danish_samples
+        train_set_size = int(total_train_samples * (1 - val_split))
+        steps_per_epoch = train_set_size // per_device_train_batch_size
+        total_training_steps = steps_per_epoch * num_train_epochs
+        eval_steps = max(1, total_training_steps // 25) # Divide total steps by 25
+        print(f"Dynamic eval_steps calculated: {eval_steps} (for ~25 evaluations)")
+
+        # --- START A NEW W&B RUN FOR THIS ITERATION ---
+        run = wandb.init(
+            project="danish-educational-scorer", # Or your project name
+            group=experiment_group_name,
+            name=f"fewshot-{dan_samples}-samples",
+            config=current_config,
+            reinit=True # Important for loops
+        )
+        base_model_name = model_name.split('/')[-1]
+        repo_name = f"xlm-roberta-danish-educational-scorer-fewshot-{dan_samples}"
+        hub_repo_id = f"{hub_username}/{repo_name}"        
+        # Run main training function with the dynamically calculated eval_steps
         trainer, metrics = main(
-            val_split, model_name, model_dir, num_danish_samples,
-            num_english_samples, learning_rate, num_train_epochs,
+            val_split, model_name, hub_repo_id, num_danish_samples,
+            num_english_samples, learning_rate, MAX_TRAINING_STEPS,
             per_device_train_batch_size, per_device_eval_batch_size,
-            evaluation_strategy, save_strategy, # Pass without eval_steps
-            current_config # Pass the current config for logging/callbacks
+            evaluation_strategy, EVAL_STEPS, save_strategy,
+            current_config
         )
         if metrics:
             all_results[f"Danish_{dan_samples}_samples"] = metrics
             print(f"Results for {dan_samples} samples: {metrics}")
+        
+        # --- END THE CURRENT W&B RUN ---
+        run.finish()
         
     print("\n--- All few-shot training runs complete ---")
     print("Summary of all results:")
