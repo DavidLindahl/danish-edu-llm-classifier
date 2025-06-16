@@ -48,6 +48,6 @@ df = pd.DataFrame(classified_samples)
 
 # Save the classified samples to a CSV file
 import pandas as pd
-output_file = "data/english_classified_samples_10000_for_danish.csv"
+output_file = "data/danish_pretranslate.csv"
 df.to_csv(output_file, index=False)
 print(f"Classified samples saved to {output_file}.")
