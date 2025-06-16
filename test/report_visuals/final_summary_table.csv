@@ -1,0 +1,8 @@
+model_name,mse,accuracy,f1_macro,f1_weighted,alpha
+Human (David),0.46,0.6,0.4684,0.5908,0.7265
+Gemini 2.5 Flash,0.81,0.56,0.4094,0.5408,0.5729
+xlm-roberta-danish-educational-scorer-zeroshot,0.6408,0.51,0.373,0.5102,0.5379
+xlm-roberta-danish-educational-scorer-zeroshot-fewshot-250,0.7385,0.44,0.3044,0.443,0.487
+xlm-roberta-danish-educational-scorer-zeroshot-fewshot-1000,0.7969,0.42,0.2922,0.4305,0.4913
+xlm-roberta-danish-educational-scorer-zeroshot-fewshot-2500,0.7963,0.42,0.2922,0.4305,0.4913
+xlm-roberta-danish-educational-scorer-full-finetuning,0.7776,0.41,0.2921,0.4392,0.5215
