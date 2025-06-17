@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 # --- Configuration ---
-INPUT_CSV_PATH = "data/danish_train.csv" # Adjust to your actual input file
+INPUT_CSV_PATH = "data/interim/danish_translate.csv" # Adjust to your actual input file
 OUTPUT_CLEANED_CSV_PATH = "data/processed/danish_train.csv"
 
 
@@ -17,16 +17,16 @@ if __name__ == "__main__":
     df = pd.read_csv(INPUT_CSV_PATH)
 
     # Validate required columns
-    if 'tran_text' not in df.columns or 'int_score' not in df.columns:
-        print("Error: Missing required columns. Expected 'tran_text' (Danish text) and 'int_score'.")
+    if 'Translated_text' not in df.columns or 'int_score' not in df.columns:
+        print("Error: Missing required columns. Expected 'Translated_text' (Danish text) and 'int_score'.")
         print("Available columns:", df.columns.tolist())
         exit()
 
     # --- Explicitly select and rename the Danish text column ---
-    # This ensures only 'tran_text' (the Danish one) is used and the original 'text' (English) is dropped.
-    cleaned_df = df[['tran_text', 'int_score']].copy()
-    cleaned_df = cleaned_df.rename(columns={'tran_text': 'text'})
-    print(f"Selected 'tran_text' and 'int_score' columns, renamed 'tran_text' to 'text'.")
+    # This ensures only 'Translated_text' (the Danish one) is used and the original 'text' (English) is dropped.
+    cleaned_df = df[['Translated_text', 'int_score']].copy()
+    cleaned_df = cleaned_df.rename(columns={'Translated_text': 'text'})
+    print(f"Selected 'Translated_text' and 'int_score' columns, renamed 'Translated_text' to 'text'.")
     print(f"Resulting sample count: {len(cleaned_df)}")
 
     # Ensure output directory exists
