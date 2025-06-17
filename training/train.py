@@ -11,7 +11,7 @@ from transformers import (
     Trainer,
     DataCollatorWithPadding,
 )
-from datasets import Dataset, ClassLabel
+from datasets import Dataset
 import yaml
 
 from metrics import compute_metrics
