@@ -17,8 +17,13 @@ import yaml
 
 from metrics import compute_metrics
 
+from utils import set_seed
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from data_processing.data_process import get_merged_dataset
+
+seed_ = 42
+set_seed(seed_)  # Set random seed for reproducibility
 
 def load_config(config_path):
     print(f"Loading config from {config_path}...")
@@ -37,13 +42,13 @@ def main(val_split, model_name, hub_repo_id, num_danish_samples,
     
     # Load and process data
     df = get_merged_dataset(english_data_amount=num_english_samples, danish_data_amount=num_danish_samples)
+    df["int_score"] = (df["int_score"] * 4 / 5) # multiply all int_score with 4/5 to convert to 0-4 scale
     dataset = Dataset.from_pandas(df[["text", "int_score"]])
-    dataset = dataset.map(lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))})
-    dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
-    dataset = dataset.train_test_split(train_size=1 - val_split, seed=42, stratify_by_column="score")
+    dataset = dataset.rename_column("int_score", "score")
+    dataset = dataset.train_test_split(train_size=1 - val_split, seed=42)
 
     # Load model, tokenizer, and prepare datasets
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1, problem_type="regression")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     dataset = dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
@@ -57,28 +62,42 @@ def main(val_split, model_name, hub_repo_id, num_danish_samples,
 
     # Set up training arguments
     training_args = TrainingArguments(
-        output_dir=f"./results-temp/{hub_repo_id.split('/')[-1]}",
-        num_train_epochs=num_train_epochs, # Use epochs instead of max_steps
+         # --- Training Parameters ---
         learning_rate=learning_rate,
+        num_train_epochs=num_train_epochs,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_eval_batch_size,
-        lr_scheduler_type="linear",
-        warmup_ratio=0.1,
-        eval_strategy=evaluation_strategy,
+
+        # --- Learning Rate Scheduling ---
+        lr_scheduler_type="linear", # or "cosine"
+        warmup_ratio=0.1, # 10% of training steps used for linear warmup
+
+
+        # --- Evaluation and Logging ---
         save_strategy=save_strategy,
-        eval_steps=eval_steps,
-        logging_steps=eval_steps,
         save_steps=eval_steps,
-        load_best_model_at_end=True,
-        metric_for_best_model="eval_mse",
-        greater_is_better=False,
         save_total_limit=1,
-        fp16=False,
+
+        eval_strategy=evaluation_strategy,
+        eval_steps=eval_steps,
+        eval_on_start=True, # Baseline
+
+        logging_steps=eval_steps,
+
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
         use_mps_device=True,
+
+        # --- other parameters ---
+        seed=seed_,
+        bf16=False,
+
+        # --- WandB and Hub Integration ---
+        output_dir=f"./results-temp/{hub_repo_id.split('/')[-1]}",
         push_to_hub=True,
         hub_model_id=hub_repo_id,
         hub_strategy="end",
-        seed=42,
     )
 
     trainer = Trainer(

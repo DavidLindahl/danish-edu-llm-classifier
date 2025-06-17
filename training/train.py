@@ -52,29 +52,22 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         danish_data_amount=num_danish_samples,
     )
 
-    df = get_merged_dataset(
-        english_data_amount=num_english_samples,
-        danish_data_amount=num_danish_samples,
-    )
+    # multiply all int_score with 4/5 to convert to 0-4 scale
+    df["int_score"] = (df["int_score"] * 4 / 5)
 
-    # df = pd.read_csv("data/english_fineweb_merged_data.csv") 
-    # df = df.sample(100, random_state=42)  # For testing, use a smaller sample
-    print(f"Loaded dataset with {len(df)} samples.")
 
     # Convert to Hugging Face dataset
     dataset = Dataset.from_pandas(df[["text", "int_score"]])
 
-    # Ensure score is an integer between 0 and 4
-    dataset = dataset.map(
-        lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))}
-    )
+    # rename columns to match expected format
+    dataset = dataset.rename_column("int_score", "score")
 
     # Cast to ClassLabel for stratification
-    dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
+    # dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
 
     # Split dataset
     dataset = dataset.train_test_split(
-        train_size=1 - val_split, seed=42, stratify_by_column="score"
+        train_size=1 - val_split, seed=42
     )
 
     # Load model and tokenizer
@@ -82,9 +75,8 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     model = AutoModelForSequenceClassification.from_pretrained(
         model_name,
         num_labels=1,  # 1 output neuron for regression
-        classifier_dropout=0.0,
-        hidden_dropout_prob=0.0, 
-        output_hidden_states=False 
+        problem_type="regression"
+
     )
 
     print("Loading tokenizer...")
