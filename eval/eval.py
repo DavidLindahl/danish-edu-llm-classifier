@@ -17,7 +17,7 @@ GOLD_STANDARD_CSV = "self_annotation/test_final.csv" # The new ground truth
 SCORE_MAPPING = {'None': 0, 'Minimal': 1, 'Basic': 2, 'Good': 3, 'Excellent': 4}
 
 # --- Output Paths ---
-OUTPUT_DIR = "test/report_visuals"
+OUTPUT_DIR = "report_visuals"
 SUMMARY_TABLE_PATH = os.path.join(OUTPUT_DIR, "final_summary_table.csv")
 PERFORMANCE_PLOT_PATH = os.path.join(OUTPUT_DIR, "performance_curve.png")
 CONFUSION_MATRICES_PATH = os.path.join(OUTPUT_DIR, "confusion_matrices.png")
