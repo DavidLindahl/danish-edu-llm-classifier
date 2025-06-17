@@ -4,8 +4,8 @@ import json
 def get_merged_dataset(
     english_data_amount=1000,
     danish_data_amount=0,
-    english_path="data/english_fineweb_merged_data.csv",
-    danish_path="data/danish_filtered_labelled_data.csv",
+    english_path="data/processed/english_fineweb_merged_data.csv",
+    danish_path="data/processed/danish_train.csv",
     random_seed=42,
 ):
     """Load and merge English and Danish datasets.

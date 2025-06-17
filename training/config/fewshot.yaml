@@ -1,17 +1,19 @@
 model_name: "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot"
 # model_name: "Leng2beat/fineweb-edu-english-classifier-base"
 num_labels: 1  # Regression head
+hub_username: "Davidozito"
+model_dir: "models/fewshot"
 
 model_dir: "models"
 val_split: 0.1
 num_train_epochs: 5
-per_device_train_batch_size: 16
-per_device_eval_batch_size: 32
-eval_steps: 50
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 8
+eval_steps: 10
 evaluation_strategy: "steps"
 logging_strategy: "steps"
 save_strategy: "steps"
-learning_rate: 3e-4
+learning_rate: 1e-5
 
 # Danish/English data selection for merging
 num_danish_samples: 0      # Number of Danish samples to include
