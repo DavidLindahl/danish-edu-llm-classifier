@@ -100,11 +100,11 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 if __name__ == "__main__":
     # --- Configuration ---
     MODEL_PATHS = [
-        "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot",
-        "Davidozito/xlm-roberta-danish-educational-scorer-full-finetuning",
-        "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot-fewshot-2500",
-        "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot-fewshot-1000",
-        "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot-fewshot-250",
+        "Davidozito/zeroshot",
+        "Davidozito/Full-finetune",
+        "Davidozito/fewshot-250-samples",
+        "Davidozito/fewshot-1000-samples",
+        "Davidozito/fewshot-2500-samples",
     ]
         
     TEST_DATA_PATH = "self_annotation/test_final.csv"
