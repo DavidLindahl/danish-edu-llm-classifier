@@ -23,14 +23,12 @@ from datasets import load_dataset
 
 HF_DATASET_SCORE_3_NAME = "HuggingFaceFW/fineweb-edu"
 HF_CONFIG_SCORE_3 = "CC-MAIN-2024-22"
-HF_DATASET_SCORE_2_NAME = "HuggingFaceFW/fineweb-edu-score-2"
-HF_CONFIG_SCORE_2 = "CC-MAIN-2024-18"
 
 # Base directory for data files (relative to this script)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
 
 # Path to locally classified FineWeb samples
-LOCAL_CSV_PATH = os.path.join(BASE_DIR, "/interim/english_classified_samples.csv")
+LOCAL_CSV_PATH = os.path.join(BASE_DIR, "../data/interim/english_classified_samples.csv")
 # Output path for the merged, balanced dataset
 OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "/processed/english_fineweb_merged_data.csv")
 
@@ -120,12 +118,9 @@ def load_and_process_dataset(
     df_score_3 = _load_hf_samples(
         HF_DATASET_SCORE_3_NAME, HF_CONFIG_SCORE_3, num_samples_score_3
     )
-    df_score_2 = _load_hf_samples(
-        HF_DATASET_SCORE_2_NAME, HF_CONFIG_SCORE_2, num_samples_score_2
-    )
     df_local = _load_local_samples(num_samples_csv)
 
-    merged = pd.concat([df_local, df_score_2, df_score_3], ignore_index=True)
+    merged = pd.concat([df_local, df_score_3], ignore_index=True)
     print(f"Merged dataset contains {len(merged)} samples")
     return merged
 
@@ -135,7 +130,7 @@ def plot_score_distribution(df: pd.DataFrame) -> None:
 
     plt.figure(figsize=(8, 5))
     # Count occurrences for each int_score 0-5
-    value_counts = df['int_score'].value_counts().reindex(range(0, 6), fill_value=0)
+    value_counts = df['int_score'].value_counts().reindex(range(0, 5), fill_value=0)
     sns.barplot(x=value_counts.index, y=value_counts.values, palette="viridis")
     plt.xlabel("int_score")
     plt.ylabel("count")
@@ -191,12 +186,10 @@ def convert_int_score_5_to_4(df: pd.DataFrame) -> pd.DataFrame:
 
 if __name__ == "__main__":
     num_samples_score_3 =  8_000
-    num_samples_score_2 = 2_500
     num_samples_csv = 10_000
 
     merged_df = load_and_process_dataset(
         num_samples_score_3=num_samples_score_3,
-        num_samples_score_2=num_samples_score_2,
         num_samples_csv=num_samples_csv
     )
     # Limit int_score 1, 2, and 3 to 1000 samples each
