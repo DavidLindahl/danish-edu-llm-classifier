@@ -30,9 +30,9 @@ HF_CONFIG_SCORE_2 = "CC-MAIN-2020-29"
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
 
 # Path to locally classified FineWeb samples
-LOCAL_CSV_PATH = os.path.join(BASE_DIR, "data/raw/danish_pretranslate.csv")
+LOCAL_CSV_PATH = os.path.join('data/raw/danish_pretranslate.csv')
 # Output path for the merged, balanced dataset
-OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "data/raw/danish_pretranslate.csv")
+OUTPUT_CSV_PATH = os.path.join(BASE_DIR, "data/interim/danish_pretranslate.csv")
 
 COMMON_COLUMNS = ["text", "language_score", "token_count", "int_score"]
 
