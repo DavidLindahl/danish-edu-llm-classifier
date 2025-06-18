@@ -17,7 +17,7 @@ GOLD_STANDARD_CSV = "self_annotation/test_final.csv" # The new ground truth
 SCORE_MAPPING = {'None': 0, 'Minimal': 1, 'Basic': 2, 'Good': 3, 'Excellent': 4}
 
 # --- Output Paths ---
-OUTPUT_DIR = "test/report_visuals"
+OUTPUT_DIR = "report_visuals"
 SUMMARY_TABLE_PATH = os.path.join(OUTPUT_DIR, "final_summary_table.csv")
 PERFORMANCE_PLOT_PATH = os.path.join(OUTPUT_DIR, "performance_curve.png")
 CONFUSION_MATRICES_PATH = os.path.join(OUTPUT_DIR, "confusion_matrices.png")
@@ -52,7 +52,7 @@ def plot_metrics_barchart(summary_df: pd.DataFrame):
     x-axis = models · y-axis = metric scores · hue = metric name
     Shows MSE, accuracy, F1-macro, F1-weighted, Krippendorff's α.
     """
-    metrics_to_show = ['mse', 'accuracy', 'f1_macro', 'f1_weighted', 'alpha']
+    metrics_to_show = ['mse', 'accuracy', 'f1_macro', 'f1_weighted']
 
     melt = summary_df.melt(
         id_vars='model_name',
@@ -72,7 +72,7 @@ def plot_metrics_barchart(summary_df: pd.DataFrame):
 
     ax.set_xlabel('Model', fontsize=12)
     ax.set_ylabel('Metric value', fontsize=12)
-    ax.set_title('Performance of each model across 5 metrics', fontsize=14)
+    ax.set_title('Performance of each model across 4 metrics', fontsize=14)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=20, ha='right')
     ax.legend(title='Metric', bbox_to_anchor=(1.03, 1), loc='upper left')
     plt.tight_layout()
@@ -84,9 +84,9 @@ def plot_metrics_barchart(summary_df: pd.DataFrame):
 
 def plot_confusion_matrices(master_df, summary_df, human_model_name):
     best_fs_model_name = summary_df.loc[summary_df[summary_df['model_name'].str.contains('fewshot')]['f1_macro'].idxmax()]['model_name']
-    models_to_plot = {
-        "Zero-Shot": "xlm-roberta-danish-educational-scorer-zeroshot",
-        f"Best Few-Shot ({best_fs_model_name.split('-')[-1]} samples)": best_fs_model_name,
+    models_to_plot = {"Zero-Shot": next(n for n in master_df["model_name"].unique()
+                            if "zero" in n.lower()),
+        f"Best Few-Shot ({best_fs_model_name.split('-')[-2]} samples)": best_fs_model_name,
         "Gemini 2.5 Flash": "Gemini 2.5 Flash",
         human_model_name: human_model_name
     }
@@ -136,14 +136,6 @@ def plot_prediction_distribution(master_df, df_true):
     plt.show()
 
 
-def krippendorff_alpha(true_series, pred_series) -> float:
-    """
-    Two-rater Krippendorff's alpha for ordinal labels 0-4.
-    true_series and pred_series must be 1-D arrays of equal length.
-    """
-    reliability_data = np.vstack([true_series, pred_series])
-    return krippendorff.alpha(reliability_data=reliability_data,
-                              level_of_measurement='ordinal')
 
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -192,8 +184,6 @@ if __name__ == "__main__":
                                     average='macro', zero_division=0),
             'f1_weighted': f1_score(g['true_label'], g['final_prediction'],
                                     average='weighted', zero_division=0),
-            'alpha'      : krippendorff_alpha(g['true_label'].values,
-                                              g['final_prediction'].values)
         })
 
     summary_df = pd.DataFrame(rows).sort_values('f1_macro', ascending=False).round(4)
