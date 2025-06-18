@@ -83,53 +83,74 @@ def plot_metrics_barchart(summary_df: pd.DataFrame):
 
 
 def plot_confusion_matrices(master_df, summary_df, human_model_name):
-    # Identify key models for plotting
-    fewshot_models_sorted = summary_df[
-        summary_df['model_name'].str.contains('fewshot') & 
-        ~summary_df['model_name'].str.contains('zeroshot')
+    """
+    Draws a 3 × 2 grid of confusion-matrix heatmaps in this order:
+      ┌───────────┬──────────────────────────────┐
+      │ Zero-Shot │ 2nd best fewshot model (…)   │
+      ├───────────┼──────────────────────────────┤
+      │ Best fewshot model (…) │ Full fine-tune  │
+      ├───────────┼──────────────────────────────┤
+      │ Gemini 2.5 Flash       │ Human (Mikkel)  │
+      └───────────┴──────────────────────────────┘
+    """
+    # --- identify model names ----------------------------------------------------------
+    zeroshot_name = next((n for n in master_df["model_name"].unique()
+                          if "zero" in n.lower()), "N/A")
+
+    fewshot_ranked = summary_df[
+        summary_df['model_name'].str.contains('fewshot', case=False, na=False) &
+        ~summary_df['model_name'].str.contains('zero', case=False, na=False)
     ].sort_values('f1_macro', ascending=False)
-    
-    best_fs_model_name = fewshot_models_sorted.iloc[0]['model_name'] if not fewshot_models_sorted.empty else "N/A"
-    second_best_fs_model_name = fewshot_models_sorted.iloc[1]['model_name'] if len(fewshot_models_sorted) > 1 else "N/A"
+
+    best_ft_name    = fewshot_ranked.iloc[0]['model_name'] if len(fewshot_ranked) > 0 else "N/A"
+    second_ft_name  = fewshot_ranked.iloc[1]['model_name'] if len(fewshot_ranked) > 1 else "N/A"
 
     try:
-        full_finetune_name = next(n for n in master_df["model_name"].unique() if "Full-finetune" in n)
+        full_ft_name = next(n for n in master_df["model_name"].unique()
+                            if "full" in n.lower() and "finetune" in n.lower())
     except StopIteration:
-        full_finetune_name = "N/A"
+        full_ft_name = "N/A"
 
-    models_to_plot = {
-        "Zero-Shot": next((n for n in master_df["model_name"].unique() if "zero" in n.lower()), "N/A"),
-        f"Best Few-Shot ({best_fs_model_name.split('-')[-1]} samples)": best_fs_model_name,
-        "Full Fine-tune": full_finetune_name,
-        f"2nd Best Few-Shot ({second_best_fs_model_name.split('-')[-1]} samples)": second_best_fs_model_name,
-        "Gemini 2.5 Flash": "Gemini 2.5 Flash",
-        human_model_name: human_model_name
-    }
-    
-    # --- THIS IS THE MAIN CHANGE: 3 rows, 2 columns ---
+    gemini_name = "Gemini 2.5 Flash"
+    human_name  = human_model_name
+
+    # --- fixed display order -----------------------------------------------------------
+    models_to_plot = [
+        ("Zero-Shot",                                    zeroshot_name),                 # top-left
+        (f"2nd best fewshot model ({second_ft_name})",   second_ft_name),                # top-right
+        (f"Best fewshot model ({best_ft_name})",         best_ft_name),                  # mid-left
+        ("Full fine-tune",                               full_ft_name),                  # mid-right
+        ("Gemini 2.5 Flash",                             gemini_name),                   # bottom-left
+        (human_name,                                     human_name)                     # bottom-right
+    ]
+
+    # --- plotting ----------------------------------------------------------------------
     fig, axes = plt.subplots(3, 2, figsize=(12, 16))
     axes = axes.flatten()
-    
-    for i, (title, model_name) in enumerate(models_to_plot.items()):
-        ax = axes[i]
+
+    for idx, (title, model_name) in enumerate(models_to_plot):
+        ax = axes[idx]
         subset = master_df[master_df['model_name'] == model_name]
-        
+
         if subset.empty or model_name == "N/A":
-            ax.text(0.5, 0.5, 'Data Not Found', ha='center', va='center', transform=ax.transAxes, fontsize=14)
+            ax.text(0.5, 0.5, 'Data Not Found', ha='center', va='center',
+                    transform=ax.transAxes, fontsize=14)
+            ax.set_xticks([]); ax.set_yticks([])
             ax.set_title(title, fontsize=14)
-            ax.set_xticks([])
-            ax.set_yticks([])
             continue
 
-        cm = confusion_matrix(subset['true_label'], subset['final_prediction'], labels=list(range(5)))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax, cbar=False, annot_kws={"size": 14})
+        cm = confusion_matrix(subset['true_label'],
+                              subset['final_prediction'],
+                              labels=list(range(5)))
+
+        sns.heatmap(cm, ax=ax, annot=True, fmt='d', cmap='Blues',
+                    cbar=False, annot_kws={"size": 14})
+        ax.set_xlabel('Predicted'); ax.set_ylabel('True')
         ax.set_title(title, fontsize=14)
-        ax.set_xlabel('Predicted Label')
-        ax.set_ylabel('True Label')
-        
+
     fig.tight_layout(pad=3.0)
     plt.savefig(CONFUSION_MATRICES_PATH, dpi=300)
-    print(f"Confusion matrix plot saved to {CONFUSION_MATRICES_PATH}")
+    print(f"Confusion matrix plot saved → {CONFUSION_MATRICES_PATH}")
     plt.show()
 
 
