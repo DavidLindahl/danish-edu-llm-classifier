@@ -1,4 +1,4 @@
-model_name: "Davidozito/xlm-roberta-danish-educational-scorer-zeroshot"
+model_name: "models/Face_Danish=0_06.17-15.35"
 # model_name: "Leng2beat/fineweb-edu-english-classifier-base"
 num_labels: 1  # Regression head
 hub_username: "Davidozito"

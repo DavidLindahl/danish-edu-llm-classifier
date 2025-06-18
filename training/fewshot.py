@@ -121,7 +121,7 @@ if __name__ == "__main__":
         print("ERROR: 'hub_username' must be set in your config YAML file.")
         exit()
 
-    few_shot_danish_samples = [250, 1000, 2500]
+    few_shot_danish_samples = [250,1000, 2500]
     all_results = {}
     experiment_group_name = f"FewShot-Danish-Epochs-{time.strftime('%m.%d')}"
 
@@ -152,14 +152,14 @@ if __name__ == "__main__":
         run = wandb.init(
             project="danish-educational-scorer",
             group=experiment_group_name,
-            name=f"fewshot-{dan_samples}-samples",
+            name=f"fewshot-{dan_samples}-samples-run3",
             config=current_config,
             reinit=True
         )
 
-        repo_name = f"{model_name.split('/')[-1]}-fewshot-{dan_samples}"
-        hub_repo_id = f"{hub_username}/{repo_name}"
-        
+        hub_username = base_config["hub_username"].strip("/")       # eg. "Davidozito"
+        repo_name    = f"fewshot-{dan_samples}-samples"             # eg. "fewshot-250-samples"
+        hub_repo_id  = f"{hub_username}/{repo_name}"                # -> "Davidozito/fewshot-250-samples"
         trainer, metrics = main(
             val_split=val_split,
             model_name=model_name,
