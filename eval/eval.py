@@ -145,7 +145,7 @@ def plot_confusion_matrices(master_df, summary_df, human_model_name):
 
         sns.heatmap(cm, ax=ax, annot=True, fmt='d', cmap='Blues',
                     cbar=False, annot_kws={"size": 14})
-        ax.set_xlabel('Predicted'); ax.set_ylabel('True')
+        ax.set_xlabel('Predicted'); ax.set_ylabel('Test')
         ax.set_title(title, fontsize=14)
 
     fig.tight_layout(pad=3.0)
