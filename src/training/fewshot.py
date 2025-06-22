@@ -15,12 +15,11 @@ import wandb
 from datasets import Dataset, ClassLabel
 import yaml
 
-from metrics import compute_metrics
+from src.training.metrics import compute_metrics
+from src.training.utils import set_seed
 
-from utils import set_seed
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from data_processing.data_process import get_merged_dataset
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from src.data_processing.data_process import get_merged_dataset
 
 seed_ = 42
 set_seed(seed_)  # Set random seed for reproducibility

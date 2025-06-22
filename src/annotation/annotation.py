@@ -5,8 +5,8 @@ import json
 
 # File paths
 folder = ""  # e.g., "intro_code/"
-RAW_DATA_FILE = folder + "data_to_annotate.csv"
-ANNOTATIONS_FILE = folder + "annotations.json"
+RAW_DATA_FILE = "src/annotation/data_to_annotate.csv"
+ANNOTATIONS_FILE = "src/annotation/annotations.json"
 
 # Load raw data (CSV stays the same)
 @st.cache_data

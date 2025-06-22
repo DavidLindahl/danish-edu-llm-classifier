@@ -13,13 +13,14 @@ from transformers import (
 )
 from datasets import Dataset
 import yaml
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from metrics import compute_metrics
-from utils import set_seed
+from src.training.metrics import compute_metrics
+from src.training.utils import set_seed
 
 # path setup to import data processing module
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from data_processing.data_process import get_merged_dataset
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from src.data_processing.data_process import get_merged_dataset
 
 seed_ = 42
 set_seed(seed_)  # Set random seed for reproducibility
@@ -174,9 +175,17 @@ def main(val_split, model_name, model_dir, num_danish_samples,
 
 
 if __name__ == "__main__":
-    # Parse command line arguments to allow for different config files
-    config_path = "training/config/base.yaml"
+    # Get the directory where the current script (train.py) is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Set the default config_path relative to the script's location
+    default_config_path = os.path.join(script_dir, "config", "base.yaml")
+    
+    # Check for a command-line argument, otherwise use the default
+    config_path = default_config_path
     if len(sys.argv) > 1:
+        # If a path is provided, we assume it's either absolute
+        # or relative to the current working directory.
         config_path = sys.argv[1]
     
     # Load configuration
