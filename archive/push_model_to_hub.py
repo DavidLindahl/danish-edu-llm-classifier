@@ -22,8 +22,8 @@ def push_model(local_path, repo_id):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Push a local model to the Hugging Face Hub.")
-    parser.add_argument("--local_path", type=str, required=True, help="Local path to the model directory.")
-    parser.add_argument("--repo_id", type=str, required=True, help="Hub repository ID (e.g., YourUsername/YourModelName).")
+    parser.add_argument("--local_path", type=str, default="models/xlm-_Danish=5000_06.22-11.17_CDW-CE", help="Local path to the model directory.")
+    parser.add_argument("--repo_id", type=str, default= "Davidozito/full-finetuning-classification", help="Hub repository ID (e.g., YourUsername/YourModelName).")
     
     args = parser.parse_args()
     push_model(args.local_path, args.repo_id)
