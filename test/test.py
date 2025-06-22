@@ -58,7 +58,8 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
                                   'attention_mask': torch.stack([s['attention_mask'] for s in data])}
     test_loader = DataLoader(tokenized_dataset, batch_size=batch_size, collate_fn=data_collator)
     
-    true_labels = np.array(test_df['int_score'])
+    human_std_int = np.array(test_df['int_score'])
+    human_std_float = np.array(test_df['float_score'])
 
     # 3. Run Inference and Process Predictions
     raw_predictions = run_inference(model, test_loader, device)
@@ -66,12 +67,12 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 
     # 4. Calculate and Display Metrics
     print("\n[Classification Report]")
-    print(classification_report(true_labels, final_predictions, labels=list(range(5)), zero_division=0))
+    print(classification_report(human_std_int, final_predictions, labels=list(range(5)), zero_division=0))
     
     # --- ADDED: Display Confusion Matrix ---
     print("[Confusion Matrix]")
     labels = list(range(5))
-    cm = confusion_matrix(true_labels, final_predictions, labels=labels)
+    cm = confusion_matrix(human_std_int, final_predictions, labels=labels)
     print("        " + " ".join([f"Pred {lbl}" for lbl in labels]))
     print("       " + "-" * 37)
     for i, row in enumerate(cm):
@@ -81,17 +82,17 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
     # 5. Create DataFrame with test data and predictions
     model_name = os.path.basename(model_path)
     result_df = test_df[['id', 'text', 'int_score']].copy()
-    result_df['real_label'] = true_labels
+    result_df['real_label'] = human_std_int
     result_df[f'predicted_label_{model_name}'] = final_predictions
     result_df[f'raw_prediction_{model_name}'] = raw_predictions
     
     # 6. Calculate summary metrics
     metrics = {
         "model_name": model_name,
-        "mse": mean_squared_error(true_labels, raw_predictions),
-        "accuracy": accuracy_score(true_labels, final_predictions),
-        "f1_macro": f1_score(true_labels, final_predictions, average='macro', zero_division=0),
-        "f1_weighted": f1_score(true_labels, final_predictions, average='weighted', zero_division=0)
+        "mse": mean_squared_error(human_std_float, raw_predictions),
+        "accuracy": accuracy_score(human_std_int, final_predictions),
+        "f1_macro": f1_score(human_std_int, final_predictions, average='macro', zero_division=0),
+        "f1_weighted": f1_score(human_std_int, final_predictions, average='weighted', zero_division=0)
     }
     
     return result_df, metrics
