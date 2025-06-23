@@ -1,6 +1,7 @@
 # danish-edu-llm-classifier
 
-A toolkit for analyzing and improving the FineWeb-C dataset for multilingual educational content classification using LLMs, with a focus on annotation quality and inter-annotator agreement.
+A comprehensive toolkit designed to **enhance multilingual AI capabilities** by **analyzing and modeling educational content**, particularly within a **low-resource language context (Danish)** using the **FineWeb datasets**. This project focuses on understanding **human annotation quality and inter-annotator agreement** and developing **scalable, consistent content classification pipelines** through the **fine-tuning of encoder models** and investigation of **cross-lingual transfer strategies**.
+For the paper on this git, go to `docs/FP_25`.
 
 ---
 
@@ -65,10 +66,6 @@ danish-edu-llm-classifier/
 ---
 
 ## Notes
-- All paths and imports have been updated for the new structure (2024).
-- Output directories like `evaluation/results/` and `evaluation/plots/` are not tracked by git.
 - For legacy scripts and results, see the `archive/` directory.
 
 ---
-
-For questions or contributions, please open an issue or pull request.
