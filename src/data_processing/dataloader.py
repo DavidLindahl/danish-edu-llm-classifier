@@ -42,7 +42,7 @@ if __name__ == "__main__":
         english_data_amount=1000,
         danish_data_amount=500,
         english_path="data/processed/english_fineweb_merged_data.csv",
-        danish_path="data/processed/danish_filtered_labelled_data.csv"
+        danish_path="data/processed/danish_train.csv"
     )
     print(f"Merged dataset contains {len(merged_df)} samples.")
     print(merged_df.head())
