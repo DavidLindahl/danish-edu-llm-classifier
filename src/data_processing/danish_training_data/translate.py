@@ -8,7 +8,7 @@ import os
 MODEL_NAME = "Helsinki-NLP/opus-mt-en-da"
 INPUT_CSV_PATH = "data/interim/danish_pretranslate.csv"
 OUTPUT_CSV_PATH = "data/interim/danish_translate.csv"
-TEXT_COLUMN_NAME = "tran_text"
+TEXT_COLUMN_NAME = "text"
 BATCH_SIZE = 32 
 
 def translate_texts_in_batches(texts_to_translate, model, tokenizer, device, batch_size):
