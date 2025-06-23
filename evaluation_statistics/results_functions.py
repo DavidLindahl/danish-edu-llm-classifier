@@ -169,7 +169,7 @@ def plot_mean_diff_models_vs_human(data_model_human):
 # -------------------------------------------------------------------
 # Plotting bootstrapped MSD for models vs human
 
-def plot_bootstrapped_msd_humanVSmodels(data_model_human, n_bootstrap=10000, alpha=0.05): 
+def plot_bootstrapped_msd(data_model_human, n_bootstrap=10000, alpha=0.05): 
     sns.set(style="whitegrid") 
 
     model_names = []
@@ -178,12 +178,17 @@ def plot_bootstrapped_msd_humanVSmodels(data_model_human, n_bootstrap=10000, alp
     cis_upper = []
 
     for name, predictions in data_model_human.items():
-        model_names.append(name[15:].capitalize() if name != "Human" else "Human")
+        
 
-        if name != "Human":
-            combined = [np.append(data_model_human["Human"][i], predictions[i]) for i in range(len(predictions))]
+        if "Human" in data_model_human.keys():
+            model_names.append(name[15:].capitalize() if name != "Human" else "Human")
+            if name != "Human":
+                combined = [np.append(data_model_human["Human"][i], predictions[i]) for i in range(len(predictions))]
+            else:
+                combined = data_model_human["Human"]
         else:
-            combined = data_model_human["Human"]
+            model_names.append(name.capitalize())
+            combined = np.array(predictions)
 
         y_all = np.asarray(Squared_diff_list(combined))
 
