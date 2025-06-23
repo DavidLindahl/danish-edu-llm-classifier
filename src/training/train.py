@@ -20,7 +20,7 @@ from src.training.utils import set_seed
 
 # path setup to import data processing module
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-from src.data_processing.data_process import get_merged_dataset
+from src.data_processing.dataloader import get_merged_dataset
 
 seed_ = 42
 set_seed(seed_)  # Set random seed for reproducibility

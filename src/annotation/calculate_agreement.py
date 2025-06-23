@@ -1,3 +1,17 @@
+"""
+Streamlit Annotation Tool for Educational Content
+
+This script launches a web-based tool for annotating the educational
+quality of text samples. It reads from a source CSV, allows a user to
+assign a label, and saves the annotations to a JSON file.
+
+Usage:
+------
+To run this application, navigate to the project's root directory
+in your terminal and execute the following command:
+
+streamlit run src/annotation/calculate_agreement.py
+"""
 import streamlit as st  # pip install streamlit pandas
 import pandas as pd
 import os

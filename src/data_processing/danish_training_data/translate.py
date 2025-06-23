@@ -4,11 +4,9 @@ from transformers import MarianMTModel, MarianTokenizer
 from tqdm import tqdm
 import os
 
-# NOTE: Removed torch_xla imports as they are for TPUs only
-
 # --- Configuration ---
 MODEL_NAME = "Helsinki-NLP/opus-mt-en-da"
-INPUT_CSV_PATH = "data/danish_pretranslate.csv"
+INPUT_CSV_PATH = "data/interim/danish_pretranslate.csv"
 OUTPUT_CSV_PATH = "data/interim/danish_translate.csv"
 TEXT_COLUMN_NAME = "tran_text"
 BATCH_SIZE = 32 
@@ -77,8 +75,6 @@ def main():
     df[TEXT_COLUMN_NAME] = translated_texts
     df.to_csv(OUTPUT_CSV_PATH, index=False, encoding='utf-8-sig')
     
-    # NOTE: Removed xm.wait_for_devices() as it is for TPUs only
-
     print("\nTranslation complete!")
     print(f"Output file created at: {OUTPUT_CSV_PATH}")
 

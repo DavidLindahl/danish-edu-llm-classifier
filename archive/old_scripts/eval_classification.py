@@ -9,10 +9,10 @@ from tqdm import tqdm
 
 # --- Configuration ---
 # Ensure these paths are correct for your project structure
-MODEL_PREDICTIONS_CSV = "archive/test_clas/test_classification_results.csv"
-GEMINI_PREDICTIONS_CSV = "eval/gemini_predictions.csv"
-HUMAN_ANNOTATIONS_JSON = "self_annotation/annotations_mikkel.json"
-GOLD_STANDARD_CSV = "self_annotation/test_final.csv" # Ground truth
+MODEL_PREDICTIONS_CSV = "results/test_results_with_predictions.csv"
+GEMINI_PREDICTIONS_CSV = "results/gemini_predictions.csv"
+HUMAN_ANNOTATIONS_JSON = "src/annotation/annotations_mikkel.json"
+GOLD_STANDARD_CSV = "src/annotation/test_final.csv" # Ground truth
 
 SCORE_MAPPING = {'None': 0, 'Minimal': 1, 'Basic': 2, 'Good': 3, 'Excellent': 4}
 

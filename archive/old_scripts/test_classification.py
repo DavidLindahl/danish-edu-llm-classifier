@@ -201,7 +201,7 @@ if __name__ == "__main__":
         # "Davidozito/fewshot-2500-samples",
     ]
         
-    TEST_DATA_PATH = "self_annotation/test_final.csv"
+    TEST_DATA_PATH = "src/annotation/test_final.csv"
     OUTPUT_CSV_PATH = "archive/test_clas/test_classification_results.csv"
     METRICS_CSV_PATH = "archive/test_clas/test_classification_metrics.csv"
     DEVICE = "cpu"

@@ -17,9 +17,9 @@ from datasets import Dataset, ClassLabel
 import yaml
 
 # path setup to import data processing module
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from data_processing.data_process import get_merged_dataset
+from src.data_processing.dataloader import get_merged_dataset
 # New compute metrics for classificaiton
 # training/metrics.py
 
@@ -232,7 +232,7 @@ def main(val_split, model_name, model_dir, num_danish_samples,
 
 
 if __name__ == "__main__":
-    config_path = "training/config/base.yaml"
+    config_path = "src/training/config/base.yaml"
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
     

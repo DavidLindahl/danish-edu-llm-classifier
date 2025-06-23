@@ -14,12 +14,12 @@ from transformers import (
 import wandb
 from datasets import Dataset, ClassLabel
 import yaml
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 from src.training.metrics import compute_metrics
 from src.training.utils import set_seed
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-from src.data_processing.data_process import get_merged_dataset
+from src.data_processing.dataloader import get_merged_dataset
 
 seed_ = 42
 set_seed(seed_)  # Set random seed for reproducibility
@@ -113,7 +113,7 @@ def main(val_split, model_name, hub_repo_id, num_danish_samples,
     return trainer, eval_metrics
 
 if __name__ == "__main__":
-    config_path = "training/config/fewshot.yaml"
+    config_path = "src/training/config/fewshot.yaml"
     base_config = load_config(config_path)
     hub_username = base_config.get("hub_username")
     if not hub_username:

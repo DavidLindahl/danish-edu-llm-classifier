@@ -152,7 +152,7 @@ def main():
     
     # Load data
 
-    csv_path = os.path.join("data/raw/", "danish_unfiltered_data.csv")
+    csv_path = os.path.join("archive/old_results/", "danish_unfiltered_data.csv")
 
     if not os.path.exists(csv_path):
         print(f"Error: File {csv_path} not found!")
@@ -167,9 +167,9 @@ def main():
                                                                bad_word_threshold=2)
     
     # Save results
-    os.makedirs("data/interim", exist_ok=True)
-    clean_data.to_csv("data/interim/danish_filtered_data.csv", index=False, encoding="utf-8")
-    # problematic_data.to_csv("data/problematic_data.csv", index=False, encoding="utf-8")
+    os.makedirs("archive/old_results", exist_ok=True)
+    clean_data.to_csv("archive/old_results/danish_filtered_data_updated.csv", index=False, encoding="utf-8")
+    problematic_data.to_csv("archive/old_results/problematic_data.csv", index=False, encoding="utf-8")
     
     # Print stats
     stats = content_filter.get_stats(problematic_data)
@@ -187,8 +187,8 @@ def main():
             print(f"  {reason}: {count}")
     
     print(f"\nFiles saved:")
-    print(f"  Clean data: data/interim/clean_data.csv")
-    print(f"  Problematic data: data/interim/problematic_data.csv")
+    print(f"  Clean data: archive/old_results/danish_filtered_data_updated.csv")
+    print(f"  Problematic data: archive/old_results/problematic_data.csv")
 
 if __name__ == "__main__":
     main()
