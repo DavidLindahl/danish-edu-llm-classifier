@@ -1,8 +1,0 @@
-model_name,mse,accuracy,f1_macro,f1_weighted
-Full-finetune,0.4772,0.51,0.511,0.5057
-Human (Mikkel),0.51,0.64,0.4803,0.6585
-fewshot-1000-samples,0.5658,0.48,0.4427,0.4304
-fewshot-2500-samples,0.5906,0.45,0.4237,0.4055
-Gemini 2.5 Flash,0.81,0.56,0.4094,0.5408
-zeroshot,0.556,0.47,0.3866,0.4157
-fewshot-250-samples,0.6564,0.42,0.3736,0.3405
