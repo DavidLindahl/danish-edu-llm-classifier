@@ -23,9 +23,7 @@ def push_model(local_path, repo_id):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Push a local model to the Hugging Face Hub."
-    )
+    parser = argparse.ArgumentParser(description="Push a local model to the Hugging Face Hub.")
     parser.add_argument(
         "--local_path",
         type=str,

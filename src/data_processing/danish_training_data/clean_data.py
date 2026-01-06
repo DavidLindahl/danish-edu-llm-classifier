@@ -19,9 +19,7 @@ if __name__ == "__main__":
 
     # Validate required columns
     if "Translated_text" not in df.columns or "int_score" not in df.columns:
-        print(
-            "Error: Missing required columns. Expected 'Translated_text' (Danish text) and 'int_score'."
-        )
+        print("Error: Missing required columns. Expected 'Translated_text' (Danish text) and 'int_score'.")
         print("Available columns:", df.columns.tolist())
         exit()
 
@@ -29,9 +27,7 @@ if __name__ == "__main__":
     # This ensures only 'Translated_text' (the Danish one) is used and the original 'text' (English) is dropped.
     cleaned_df = df[["Translated_text", "int_score"]].copy()
     cleaned_df = cleaned_df.rename(columns={"Translated_text": "text"})
-    print(
-        "Selected 'Translated_text' and 'int_score' columns, renamed 'Translated_text' to 'text'."
-    )
+    print("Selected 'Translated_text' and 'int_score' columns, renamed 'Translated_text' to 'text'.")
     print(f"Resulting sample count: {len(cleaned_df)}")
 
     # Ensure output directory exists

@@ -99,27 +99,19 @@ def plot_confusion_matrices(master_df, summary_df, human_model_name):
       └───────────┴──────────────────────────────┘
     """
     # --- identify model names ----------------------------------------------------------
-    zeroshot_name = next(
-        (n for n in master_df["model_name"].unique() if "zero" in n.lower()), "N/A"
-    )
+    zeroshot_name = next((n for n in master_df["model_name"].unique() if "zero" in n.lower()), "N/A")
 
     fewshot_ranked = summary_df[
         summary_df["model_name"].str.contains("fewshot", case=False, na=False)
         & ~summary_df["model_name"].str.contains("zero", case=False, na=False)
     ].sort_values("f1_macro", ascending=False)
 
-    best_ft_name = (
-        fewshot_ranked.iloc[0]["model_name"] if len(fewshot_ranked) > 0 else "N/A"
-    )
-    second_ft_name = (
-        fewshot_ranked.iloc[1]["model_name"] if len(fewshot_ranked) > 1 else "N/A"
-    )
+    best_ft_name = fewshot_ranked.iloc[0]["model_name"] if len(fewshot_ranked) > 0 else "N/A"
+    second_ft_name = fewshot_ranked.iloc[1]["model_name"] if len(fewshot_ranked) > 1 else "N/A"
 
     try:
         full_ft_name = next(
-            n
-            for n in master_df["model_name"].unique()
-            if "full" in n.lower() and "finetune" in n.lower()
+            n for n in master_df["model_name"].unique() if "full" in n.lower() and "finetune" in n.lower()
         )
     except StopIteration:
         full_ft_name = "N/A"
@@ -160,9 +152,7 @@ def plot_confusion_matrices(master_df, summary_df, human_model_name):
             ax.set_title(title, fontsize=14)
             continue
 
-        cm = confusion_matrix(
-            subset["true_label"], subset["final_prediction"], labels=list(range(5))
-        )
+        cm = confusion_matrix(subset["true_label"], subset["final_prediction"], labels=list(range(5)))
 
         sns.heatmap(
             cm,
@@ -193,9 +183,7 @@ def plot_prediction_distribution(master_df, df_true):
     true_df["model_name"] = "True Distribution"
 
     #  predictions dataframe
-    preds_df = master_df[["final_prediction", "model_name"]].rename(
-        columns={"final_prediction": "score"}
-    )
+    preds_df = master_df[["final_prediction", "model_name"]].rename(columns={"final_prediction": "score"})
 
     plot_df = pd.concat([preds_df, true_df], ignore_index=True)
     plot_df["score"] = plot_df["score"].astype(int)
@@ -232,19 +220,13 @@ if __name__ == "__main__":
     # Combine all annotators
     all_dfs = [master_df]
     for df_annotator, name in [(df_gemini, "Gemini 2.5 Flash"), (df_human, human_name)]:
-        temp_df = df_true[["text", "int_score"]].rename(
-            columns={"int_score": "true_label"}
-        )
-        temp_df = temp_df.merge(
-            df_annotator[["text", "final_prediction"]], on="text", how="left"
-        )
+        temp_df = df_true[["text", "int_score"]].rename(columns={"int_score": "true_label"})
+        temp_df = temp_df.merge(df_annotator[["text", "final_prediction"]], on="text", how="left")
         temp_df["model_name"] = name
         temp_df["raw_prediction"] = np.nan
         all_dfs.append(temp_df)
 
-    master_df = pd.concat(all_dfs, ignore_index=True).dropna(
-        subset=["final_prediction"]
-    )
+    master_df = pd.concat(all_dfs, ignore_index=True).dropna(subset=["final_prediction"])
     master_df["final_prediction"] = master_df["final_prediction"].astype(int)
 
     # 3. Calculate and save summary metrics

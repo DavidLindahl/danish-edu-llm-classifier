@@ -60,9 +60,7 @@ def main(
     # All config parameters are now passed directly as arguments
 
     # Load data
-    print(
-        f"Loading {num_english_samples} English and {num_danish_samples} Danish samples..."
-    )
+    print(f"Loading {num_english_samples} English and {num_danish_samples} Danish samples...")
     df = get_merged_dataset(
         english_data_amount=num_english_samples,
         danish_data_amount=num_danish_samples,
@@ -95,9 +93,7 @@ def main(
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # Process dataset
-    dataset = dataset.map(
-        lambda examples: preprocess(examples, tokenizer), batched=True
-    )
+    dataset = dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     train_dataset = dataset["train"]
@@ -176,9 +172,7 @@ def main(
     os.makedirs(final_model_save_path, exist_ok=True)
     trainer.save_model(final_model_save_path)
     tokenizer.save_pretrained(final_model_save_path)
-    trainer.state.save_to_json(
-        os.path.join(final_model_save_path, "trainer_state.json")
-    )
+    trainer.state.save_to_json(os.path.join(final_model_save_path, "trainer_state.json"))
 
     print("Training and evaluation complete.")
     print("Done.")

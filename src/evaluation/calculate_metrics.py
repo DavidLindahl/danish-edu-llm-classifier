@@ -12,9 +12,7 @@ def Squared_diff_list(score_data):  # <-- list of lists
     for scores in score_data:
         c = len(scores)
         # The Squared Difference between unordered distinct pairs for one text:
-        SD = (2 / (c * (c - 1))) * sum(
-            (scores[j] - scores[k]) ** 2 for j in range(c) for k in range(j + 1, c)
-        )
+        SD = (2 / (c * (c - 1))) * sum((scores[j] - scores[k]) ** 2 for j in range(c) for k in range(j + 1, c))
         SD_list.append(SD)
 
     return SD_list
@@ -219,10 +217,7 @@ def plot_bootstrapped_msd(data_model_human, n_bootstrap=10000, alpha=0.05):
         if "Human" in data_model_human.keys():
             model_names.append(name[15:].capitalize() if name != "Human" else "Human")
             if name != "Human":
-                combined = [
-                    np.append(data_model_human["Human"][i], predictions[i])
-                    for i in range(len(predictions))
-                ]
+                combined = [np.append(data_model_human["Human"][i], predictions[i]) for i in range(len(predictions))]
             else:
                 combined = data_model_human["Human"]
         else:
@@ -304,18 +299,14 @@ def bootstrap_alpha(score_data):
 
     for _ in tqdm(range(n_bootstrap)):
         # Sample rows with replacement
-        indices = np.random.choice(
-            len(annotations), size=len(annotations), replace=True
-        )
+        indices = np.random.choice(len(annotations), size=len(annotations), replace=True)
         resampled = annotations[indices]
 
         # Transpose to shape (n_raters, n_items)
         data = resampled.T
 
         # Compute Krippendorff's alpha (interval scale assumed here)
-        alpha = krippendorff.alpha(
-            reliability_data=data, level_of_measurement="interval"
-        )
+        alpha = krippendorff.alpha(reliability_data=data, level_of_measurement="interval")
         alpha_values.append(alpha)
 
     alpha_values = np.array(alpha_values)
@@ -328,9 +319,7 @@ def bootstrap_alpha(score_data):
     return [mean_alpha, lower, upper]
 
 
-def plot_CI(
-    data, labels=None, title="Bootstrapped 95% Confidence Intervals", ylabel="Value"
-):
+def plot_CI(data, labels=None, title="Bootstrapped 95% Confidence Intervals", ylabel="Value"):
     """
     Plot mean and 95% CI for each entry in data.
     Highlights the last CI in blue.

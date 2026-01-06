@@ -33,9 +33,7 @@ accuracy_metric = evaluate.load("accuracy")
 precision_metric = evaluate.load("precision")
 recall_metric = evaluate.load("recall")
 f1_metric = evaluate.load("f1")
-mse_metric = evaluate.load(
-    "mse"
-)  # Keep if you still want to calculate MSE, see notes below
+mse_metric = evaluate.load("mse")  # Keep if you still want to calculate MSE, see notes below
 
 
 def compute_metrics(eval_pred):
@@ -49,27 +47,21 @@ def compute_metrics(eval_pred):
     # --------------------------------------------------------
 
     # Calculate metrics using the predicted_class_ids
-    accuracy = accuracy_metric.compute(
-        predictions=predictions_class_ids, references=labels
-    )["accuracy"]
+    accuracy = accuracy_metric.compute(predictions=predictions_class_ids, references=labels)["accuracy"]
 
     # For precision, recall, and f1-score in multi-class problems,
     # it's crucial to specify an 'average' method (e.g., 'macro' or 'weighted').
     # 'macro' treats all classes equally.
     # 'weighted' accounts for class imbalance.
     # You can return both if needed.
-    precision_macro = precision_metric.compute(
-        predictions=predictions_class_ids, references=labels, average="macro"
-    )["precision"]
-    recall_macro = recall_metric.compute(
-        predictions=predictions_class_ids, references=labels, average="macro"
-    )["recall"]
-    f1_macro = f1_metric.compute(
-        predictions=predictions_class_ids, references=labels, average="macro"
-    )["f1"]
-    f1_weighted = f1_metric.compute(
-        predictions=predictions_class_ids, references=labels, average="weighted"
-    )["f1"]
+    precision_macro = precision_metric.compute(predictions=predictions_class_ids, references=labels, average="macro")[
+        "precision"
+    ]
+    recall_macro = recall_metric.compute(predictions=predictions_class_ids, references=labels, average="macro")[
+        "recall"
+    ]
+    f1_macro = f1_metric.compute(predictions=predictions_class_ids, references=labels, average="macro")["f1"]
+    f1_weighted = f1_metric.compute(predictions=predictions_class_ids, references=labels, average="weighted")["f1"]
 
     # --- IMPORTANT NOTE ON MSE ---
     # If your model is a classification model outputting logits (5 values),
@@ -125,9 +117,7 @@ def main(
 ):
     """Main training function that handles the entire training pipeline."""
 
-    print(
-        f"Loading {num_english_samples} English and {num_danish_samples} Danish samples..."
-    )
+    print(f"Loading {num_english_samples} English and {num_danish_samples} Danish samples...")
     df = get_merged_dataset(
         english_data_amount=num_english_samples,
         danish_data_amount=num_danish_samples,
@@ -135,15 +125,11 @@ def main(
     print(f"Loaded dataset with {len(df)} samples.")
 
     dataset = Dataset.from_pandas(df[["text", "int_score"]])
-    dataset = dataset.map(
-        lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))}
-    )
+    dataset = dataset.map(lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))})
     dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
 
     # Split dataset FIRST to calculate weights ONLY on the training set
-    dataset = dataset.train_test_split(
-        train_size=1 - val_split, seed=42, stratify_by_column="score"
-    )
+    dataset = dataset.train_test_split(train_size=1 - val_split, seed=42, stratify_by_column="score")
 
     train_dataset = dataset["train"]
     val_dataset = dataset["test"]
@@ -207,12 +193,8 @@ def main(
     tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
 
     # Process datasets
-    train_dataset = train_dataset.map(
-        lambda examples: preprocess(examples, tokenizer), batched=True
-    )
-    val_dataset = val_dataset.map(
-        lambda examples: preprocess(examples, tokenizer), batched=True
-    )
+    train_dataset = train_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
+    val_dataset = val_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     print("Freezing base model parameters...")
@@ -255,9 +237,7 @@ def main(
     os.makedirs(final_model_save_path, exist_ok=True)
     trainer.save_model(final_model_save_path)
     tokenizer.save_pretrained(final_model_save_path)
-    trainer.state.save_to_json(
-        os.path.join(final_model_save_path, "trainer_state.json")
-    )
+    trainer.state.save_to_json(os.path.join(final_model_save_path, "trainer_state.json"))
 
     print("Training and evaluation complete.")
     print("Done.")

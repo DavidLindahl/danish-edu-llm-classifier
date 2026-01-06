@@ -11,9 +11,7 @@ import numpy as np
 from datasets import load_dataset
 
 
-def download_danish_fineweb_c(
-    to_csv=False, path_to_save=os.path.join("data", "fineweb-c_danish.csv")
-):
+def download_danish_fineweb_c(to_csv=False, path_to_save=os.path.join("data", "fineweb-c_danish.csv")):
     """
     Loads the Danish (dan_Latn) configuration of the Fineweb-C dataset,
     selects the 'text' and 'score' columns, and saves them to a CSV.

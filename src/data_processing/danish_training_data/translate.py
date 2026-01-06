@@ -13,31 +13,23 @@ TEXT_COLUMN_NAME = "text"
 BATCH_SIZE = 32
 
 
-def translate_texts_in_batches(
-    texts_to_translate, model, tokenizer, device, batch_size
-):
+def translate_texts_in_batches(texts_to_translate, model, tokenizer, device, batch_size):
     """
     Translates a list of texts in batches to optimize for speed and memory.
     """
     danish_translations = []
-    print(
-        f"Starting translation of {len(texts_to_translate)} texts in batches of {batch_size}..."
-    )
+    print(f"Starting translation of {len(texts_to_translate)} texts in batches of {batch_size}...")
 
-    for i in tqdm(
-        range(0, len(texts_to_translate), batch_size), desc="Translating Batches"
-    ):
+    for i in tqdm(range(0, len(texts_to_translate), batch_size), desc="Translating Batches"):
         batch = texts_to_translate[i : i + batch_size]
 
         # Move the tokenized batch to the specified device (MPS or CPU)
-        tokenized_batch = tokenizer(
-            batch, return_tensors="pt", padding=True, truncation=True, max_length=512
-        ).to(device)
+        tokenized_batch = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=512).to(
+            device
+        )
 
         translated_tokens = model.generate(**tokenized_batch)
-        translated_batch = tokenizer.batch_decode(
-            translated_tokens, skip_special_tokens=True
-        )
+        translated_batch = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
         danish_translations.extend(translated_batch)
 
     return danish_translations
@@ -73,9 +65,7 @@ def main():
     texts_to_translate = df[TEXT_COLUMN_NAME].astype(str).tolist()
 
     # --- 4. Perform Translation ---
-    translated_texts = translate_texts_in_batches(
-        texts_to_translate, model, tokenizer, device, BATCH_SIZE
-    )
+    translated_texts = translate_texts_in_batches(texts_to_translate, model, tokenizer, device, BATCH_SIZE)
 
     # --- 5. Update DataFrame and Save Output ---
     print("Updating DataFrame with translations...")

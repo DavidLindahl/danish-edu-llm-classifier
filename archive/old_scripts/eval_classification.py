@@ -74,21 +74,13 @@ def plot_confusion_matrices(master_df, summary_df):
         & ~summary_df["model_name"].str.contains("zero", case=False, na=False)
     ].sort_values("accuracy", ascending=False)
 
-    best_ft_name = (
-        fewshot_models.iloc[0]["model_name"] if len(fewshot_models) > 0 else "N/A"
-    )
-    second_ft_name = (
-        fewshot_models.iloc[1]["model_name"] if len(fewshot_models) > 1 else "N/A"
-    )
+    best_ft_name = fewshot_models.iloc[0]["model_name"] if len(fewshot_models) > 0 else "N/A"
+    second_ft_name = fewshot_models.iloc[1]["model_name"] if len(fewshot_models) > 1 else "N/A"
 
     # Note: "Full fine-tune" will show "Data Not Found" if no model name in your
     # data contains both "full" and "finetune". This is expected behavior.
     full_ft_name = next(
-        (
-            n
-            for n in all_model_names
-            if "full" in n.lower() and "finetuning" in n.lower()
-        ),
+        (n for n in all_model_names if "full" in n.lower() and "finetuning" in n.lower()),
         "N/A",
     )
 
@@ -112,9 +104,7 @@ def plot_confusion_matrices(master_df, summary_df):
         ax = axes[idx]
         subset = master_df[master_df["model_name"] == model_name]
 
-        accuracy_val = summary_df.loc[
-            summary_df["model_name"] == model_name, "accuracy"
-        ].values
+        accuracy_val = summary_df.loc[summary_df["model_name"] == model_name, "accuracy"].values
         acc_str = f"(Acc: {accuracy_val[0]:.3f})" if accuracy_val.size > 0 else "(N/A)"
 
         # --- Generate Final Title ---
@@ -144,9 +134,7 @@ def plot_confusion_matrices(master_df, summary_df):
             ax.set_yticks([])
             continue
 
-        cm = confusion_matrix(
-            subset["true_label"], subset["final_prediction"], labels=list(range(5))
-        )
+        cm = confusion_matrix(subset["true_label"], subset["final_prediction"], labels=list(range(5)))
 
         sns.heatmap(
             cm,
@@ -238,14 +226,10 @@ if __name__ == "__main__":
             how="left",
         )
         merged["model_name"] = name
-        merged["raw_prediction"] = merged[
-            "final_prediction"
-        ]  # Use final_prediction for MSE
+        merged["raw_prediction"] = merged["final_prediction"]  # Use final_prediction for MSE
         all_dfs.append(merged)
 
-    master_df = pd.concat(all_dfs, ignore_index=True).dropna(
-        subset=["final_prediction"]
-    )
+    master_df = pd.concat(all_dfs, ignore_index=True).dropna(subset=["final_prediction"])
     master_df["final_prediction"] = master_df["final_prediction"].astype(int)
     master_df["true_label"] = master_df["true_label"].astype(int)
     print("All models merged into a master dataframe.")

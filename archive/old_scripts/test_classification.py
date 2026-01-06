@@ -90,12 +90,8 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 
     try:
         # 1. Setup Device, Model, and Tokenizer
-        device = torch.device(
-            device_str if torch.cuda.is_available() and device_str == "cuda" else "cpu"
-        )
-        model = AutoModelForSequenceClassification.from_pretrained(model_path).to(
-            device
-        )
+        device = torch.device(device_str if torch.cuda.is_available() and device_str == "cuda" else "cpu")
+        model = AutoModelForSequenceClassification.from_pretrained(model_path).to(device)
         tokenizer = AutoTokenizer.from_pretrained(model_path)
 
         # Print model info for debugging
@@ -108,24 +104,16 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
         test_dataset = Dataset.from_pandas(test_df)
 
         def tokenize_function(examples):
-            return tokenizer(
-                examples["text"], truncation=True, padding="max_length", max_length=512
-            )
+            return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
 
-        tokenized_dataset = test_dataset.map(
-            tokenize_function, batched=True, remove_columns=test_df.columns.tolist()
-        )
-        tokenized_dataset.set_format(
-            type="torch", columns=["input_ids", "attention_mask"]
-        )
+        tokenized_dataset = test_dataset.map(tokenize_function, batched=True, remove_columns=test_df.columns.tolist())
+        tokenized_dataset.set_format(type="torch", columns=["input_ids", "attention_mask"])
 
         data_collator = lambda data: {
             "input_ids": torch.stack([s["input_ids"] for s in data]),
             "attention_mask": torch.stack([s["attention_mask"] for s in data]),
         }
-        test_loader = DataLoader(
-            tokenized_dataset, batch_size=batch_size, collate_fn=data_collator
-        )
+        test_loader = DataLoader(tokenized_dataset, batch_size=batch_size, collate_fn=data_collator)
 
         true_labels = np.array(test_df["int_score"])
 
@@ -135,9 +123,7 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
         # Debug: Print raw prediction info
         print(f"Raw predictions shape: {raw_predictions.shape}")
         print(f"Raw predictions sample: {raw_predictions[:5]}")
-        print(
-            f"Raw predictions range: [{raw_predictions.min():.3f}, {raw_predictions.max():.3f}]"
-        )
+        print(f"Raw predictions range: [{raw_predictions.min():.3f}, {raw_predictions.max():.3f}]")
 
         # Ensure raw_predictions is 1D and same length as true_labels
         raw_predictions = raw_predictions.flatten()
@@ -150,9 +136,7 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 
         # 4. Calculate and Display Metrics
         print("\n[Classification Report]")
-        report = safe_classification_report(
-            true_labels, final_predictions, labels=list(range(5))
-        )
+        report = safe_classification_report(true_labels, final_predictions, labels=list(range(5)))
         print(report)
 
         print("[Confusion Matrix]")
@@ -166,9 +150,7 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 
         # 5. Create DataFrame with test data and predictions
         model_name = os.path.basename(model_path)
-        result_df = test_df[["id", "text", "int_score"]].copy()[
-            :min_len
-        ]  # Ensure same length
+        result_df = test_df[["id", "text", "int_score"]].copy()[:min_len]  # Ensure same length
         result_df["real_label"] = true_labels
         result_df[f"predicted_label_{model_name}"] = final_predictions
         result_df[f"raw_prediction_{model_name}"] = raw_predictions
@@ -177,12 +159,8 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
         try:
             mse = mean_squared_error(true_labels, raw_predictions)
             accuracy = accuracy_score(true_labels, final_predictions)
-            f1_macro = f1_score(
-                true_labels, final_predictions, average="macro", zero_division=0
-            )
-            f1_weighted = f1_score(
-                true_labels, final_predictions, average="weighted", zero_division=0
-            )
+            f1_macro = f1_score(true_labels, final_predictions, average="macro", zero_division=0)
+            f1_weighted = f1_score(true_labels, final_predictions, average="weighted", zero_division=0)
         except Exception as e:
             print(f"Error calculating metrics: {e}")
             mse = accuracy = f1_macro = f1_weighted = -1.0
@@ -243,9 +221,7 @@ if __name__ == "__main__":
     combined_results["real_label"] = test_df["int_score"]
 
     for path in MODEL_PATHS:
-        result_df, metrics = evaluate_single_model(
-            path, TEST_DATA_PATH, DEVICE, BATCH_SIZE
-        )
+        result_df, metrics = evaluate_single_model(path, TEST_DATA_PATH, DEVICE, BATCH_SIZE)
 
         if result_df is not None:
             model_name = os.path.basename(path)
@@ -256,12 +232,8 @@ if __name__ == "__main__":
             result_df = result_df.iloc[:min_len].copy()
 
             # Add predictions to combined results
-            combined_results[f"predicted_label_{model_name}"] = result_df[
-                f"predicted_label_{model_name}"
-            ]
-            combined_results[f"raw_prediction_{model_name}"] = result_df[
-                f"raw_prediction_{model_name}"
-            ]
+            combined_results[f"predicted_label_{model_name}"] = result_df[f"predicted_label_{model_name}"]
+            combined_results[f"raw_prediction_{model_name}"] = result_df[f"raw_prediction_{model_name}"]
 
         all_metrics.append(metrics)
 

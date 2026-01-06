@@ -6,9 +6,7 @@ from tqdm import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 N = 1000  # Number of samples to load (change as needed)
-dataset = load_dataset(
-    "HuggingFaceFW/fineweb", name="CC-MAIN-2022-40", split="train", streaming=True
-)
+dataset = load_dataset("HuggingFaceFW/fineweb", name="CC-MAIN-2022-40", split="train", streaming=True)
 
 # straming the first N samples from the dataset
 streamed_samples = []
@@ -20,9 +18,7 @@ print(f"Loaded {len(streamed_samples)} samples.")
 
 # load the tokenizer and model for classification
 tokenizer = AutoTokenizer.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
-model = AutoModelForSequenceClassification.from_pretrained(
-    "HuggingFaceTB/fineweb-edu-classifier"
-)
+model = AutoModelForSequenceClassification.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
 
 
 # Classify streamed samples and add score and int_score

@@ -5,9 +5,7 @@ from datatrove.pipeline.writers import JsonlWriter
 
 pipeline_exec = LocalPipelineExecutor(
     pipeline=[
-        ParquetReader(
-            "hf://datasets/HuggingFaceFW/fineweb-2/data/dan_Latn/train", limit=1000
-        ),
+        ParquetReader("hf://datasets/HuggingFaceFW/fineweb-2/data/dan_Latn/train", limit=1000),
         LambdaFilter(lambda doc: "hugging" in doc.text),
         JsonlWriter("some-output-path"),  # NOTE: change this
     ],

@@ -21,21 +21,13 @@ def compute_metrics(eval_pred):
     accuracy_metric = evaluate.load("accuracy")
 
     # Compute metrics using macro average for multi-class classification
-    precision = precision_metric.compute(
-        predictions=class_preds, references=class_labels, average="macro"
-    )["precision"]
+    precision = precision_metric.compute(predictions=class_preds, references=class_labels, average="macro")["precision"]
 
-    recall = recall_metric.compute(
-        predictions=class_preds, references=class_labels, average="macro"
-    )["recall"]
+    recall = recall_metric.compute(predictions=class_preds, references=class_labels, average="macro")["recall"]
 
-    f1 = f1_metric.compute(
-        predictions=class_preds, references=class_labels, average="macro"
-    )["f1"]
+    f1 = f1_metric.compute(predictions=class_preds, references=class_labels, average="macro")["f1"]
 
-    accuracy = accuracy_metric.compute(
-        predictions=class_preds, references=class_labels
-    )["accuracy"]
+    accuracy = accuracy_metric.compute(predictions=class_preds, references=class_labels)["accuracy"]
 
     mse_score = mean_squared_error(labels, preds)
 

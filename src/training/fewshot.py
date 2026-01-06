@@ -55,24 +55,16 @@ def main(
     config,
 ):
     # Load and process data
-    df = get_merged_dataset(
-        english_data_amount=num_english_samples, danish_data_amount=num_danish_samples
-    )
-    df["int_score"] = (
-        df["int_score"] * 4 / 5
-    )  # multiply all int_score with 4/5 to convert to 0-4 scale
+    df = get_merged_dataset(english_data_amount=num_english_samples, danish_data_amount=num_danish_samples)
+    df["int_score"] = df["int_score"] * 4 / 5  # multiply all int_score with 4/5 to convert to 0-4 scale
     dataset = Dataset.from_pandas(df[["text", "int_score"]])
     dataset = dataset.rename_column("int_score", "score")
     dataset = dataset.train_test_split(train_size=1 - val_split, seed=42)
 
     # Load model, tokenizer, and prepare datasets
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_name, num_labels=1, problem_type="regression"
-    )
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1, problem_type="regression")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    dataset = dataset.map(
-        lambda examples: preprocess(examples, tokenizer), batched=True
-    )
+    dataset = dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
     train_dataset, val_dataset = dataset["train"], dataset["test"]
 
@@ -158,9 +150,7 @@ if __name__ == "__main__":
         # Extract config parameters
         model_name = current_config["model_name"]
         num_train_epochs = current_config.get("num_train_epochs", 3)
-        per_device_train_batch_size = current_config.get(
-            "per_device_train_batch_size", 16
-        )
+        per_device_train_batch_size = current_config.get("per_device_train_batch_size", 16)
         val_split = current_config.get("val_split", 0.1)
         num_english_samples = current_config.get("num_english_samples", 0)
 
@@ -180,9 +170,7 @@ if __name__ == "__main__":
 
         hub_username = base_config["hub_username"].strip("/")  # eg. "Davidozito"
         repo_name = f"fewshot-{dan_samples}-samples"  # eg. "fewshot-250-samples"
-        hub_repo_id = (
-            f"{hub_username}/{repo_name}"  # -> "Davidozito/fewshot-250-samples"
-        )
+        hub_repo_id = f"{hub_username}/{repo_name}"  # -> "Davidozito/fewshot-250-samples"
         trainer, metrics = main(
             val_split=val_split,
             model_name=model_name,
@@ -192,9 +180,7 @@ if __name__ == "__main__":
             learning_rate=float(current_config.get("learning_rate", 3e-4)),
             num_train_epochs=num_train_epochs,  # Pass epochs
             per_device_train_batch_size=per_device_train_batch_size,
-            per_device_eval_batch_size=current_config.get(
-                "per_device_eval_batch_size", 32
-            ),
+            per_device_eval_batch_size=current_config.get("per_device_eval_batch_size", 32),
             evaluation_strategy="steps",
             eval_steps=eval_steps,  # Pass dynamic eval steps
             save_strategy="steps",

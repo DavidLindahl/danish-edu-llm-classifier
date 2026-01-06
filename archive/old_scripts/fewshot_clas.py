@@ -45,9 +45,7 @@ class CustomCDWTrainer(Trainer):
 
         logits = outputs.get("logits")
 
-        loss_fct = nn.CrossEntropyLoss(
-            weight=self.class_weights_tensor.to(logits.device)
-        )
+        loss_fct = nn.CrossEntropyLoss(weight=self.class_weights_tensor.to(logits.device))
 
         loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
 
@@ -62,9 +60,7 @@ def load_config(config_path):
 
 def preprocess(examples, tokenizer):
     batch = tokenizer(examples["text"], truncation=True)
-    batch["labels"] = np.int64(
-        examples["score"]
-    )  # Changed to np.int64 for classification
+    batch["labels"] = np.int64(examples["score"])  # Changed to np.int64 for classification
     return batch
 
 
@@ -84,22 +80,16 @@ def main(
     config,
 ):
     # Load and process data
-    df = get_merged_dataset(
-        english_data_amount=num_english_samples, danish_data_amount=num_danish_samples
-    )
+    df = get_merged_dataset(english_data_amount=num_english_samples, danish_data_amount=num_danish_samples)
     # Removed df["int_score"] = (df["int_score"] * 4 / 5) as it's for regression scaling
     dataset = Dataset.from_pandas(df[["text", "int_score"]])
     dataset = dataset.rename_column("int_score", "score")
 
     # Cast to ClassLabel for stratification and classification
-    dataset = dataset.map(
-        lambda x: {"score": int(np.clip(round(float(x["score"])), 0, 4))}
-    )
+    dataset = dataset.map(lambda x: {"score": int(np.clip(round(float(x["score"])), 0, 4))})
     dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
 
-    dataset = dataset.train_test_split(
-        train_size=1 - val_split, seed=42, stratify_by_column="score"
-    )
+    dataset = dataset.train_test_split(train_size=1 - val_split, seed=42, stratify_by_column="score")
 
     train_dataset, val_dataset = dataset["train"], dataset["test"]
 
@@ -116,17 +106,11 @@ def main(
         num_labels=5,  # 5 classes for classification (0-4)
         problem_type="single_label_classification",  # Changed for classification
     )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name, model_max_length=512
-    )  # Added model_max_length
+    tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)  # Added model_max_length
 
     # Process datasets
-    train_dataset = train_dataset.map(
-        lambda examples: preprocess(examples, tokenizer), batched=True
-    )
-    val_dataset = val_dataset.map(
-        lambda examples: preprocess(examples, tokenizer), batched=True
-    )
+    train_dataset = train_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
+    val_dataset = val_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     # Freeze base model layers
@@ -204,9 +188,7 @@ if __name__ == "__main__":
 
         current_config = base_config.copy()
         current_config["num_danish_samples"] = dan_samples
-        current_config["num_english_samples"] = (
-            0  # Ensure only Danish samples are used for fine-tuning here
-        )
+        current_config["num_english_samples"] = 0  # Ensure only Danish samples are used for fine-tuning here
 
         # Removed this block as it contradicts few-shot purpose
         # if dan_samples == 5000:
@@ -214,24 +196,16 @@ if __name__ == "__main__":
         #     current_config["num_english_samples"] = 0
 
         # Extract config parameters
-        model_name = current_config[
-            "model_name"
-        ]  # This should be the pre-trained EN-only model
+        model_name = current_config["model_name"]  # This should be the pre-trained EN-only model
         num_train_epochs = current_config.get("num_train_epochs", 3)
-        per_device_train_batch_size = current_config.get(
-            "per_device_train_batch_size", 16
-        )
+        per_device_train_batch_size = current_config.get("per_device_train_batch_size", 16)
         val_split = current_config.get("val_split", 0.1)
-        num_english_samples = current_config.get(
-            "num_english_samples", 0
-        )  # This is 0 for few-shot fine-tuning phase
+        num_english_samples = current_config.get("num_english_samples", 0)  # This is 0 for few-shot fine-tuning phase
 
         # Dynamically calculate eval_steps for 4 evaluations per epoch
         # Use total samples (EN + DA) for training size calculation if it was a combined dataset scenario.
         # But for few-shot, train_set_size should reflect the *danish* samples used for fine-tuning.
-        train_set_size = int(
-            dan_samples * (1 - val_split)
-        )  # Using dan_samples for relevant train_set_size
+        train_set_size = int(dan_samples * (1 - val_split))  # Using dan_samples for relevant train_set_size
         steps_per_epoch = max(1, train_set_size // per_device_train_batch_size)
         eval_steps = max(1, steps_per_epoch // 4)  # Evaluate 4 times per epoch
         print(f"Dynamic eval_steps calculated: {eval_steps}")
@@ -245,9 +219,7 @@ if __name__ == "__main__":
         )
 
         hub_username = base_config["hub_username"].strip("/")
-        repo_name = (
-            f"fewshot-CDW-CE-{dan_samples}-samples"  # Changed repo name for clarity
-        )
+        repo_name = f"fewshot-CDW-CE-{dan_samples}-samples"  # Changed repo name for clarity
         hub_repo_id = f"{hub_username}/{repo_name}"
         trainer, metrics = main(
             val_split=val_split,
@@ -258,9 +230,7 @@ if __name__ == "__main__":
             learning_rate=float(current_config.get("learning_rate", 3e-4)),
             num_train_epochs=num_train_epochs,
             per_device_train_batch_size=per_device_train_batch_size,
-            per_device_eval_batch_size=current_config.get(
-                "per_device_eval_batch_size", 32
-            ),
+            per_device_eval_batch_size=current_config.get("per_device_eval_batch_size", 32),
             evaluation_strategy="steps",
             eval_steps=eval_steps,
             save_strategy="steps",

@@ -37,9 +37,7 @@ def convert_jsonl_to_csv(jsonl_path: str, csv_path: str):
 
     # Check if all required columns are present
     if not all(col in df.columns for col in required_columns):
-        print(
-            f"❌ ERROR: One or more required columns {required_columns} not found in the file."
-        )
+        print(f"❌ ERROR: One or more required columns {required_columns} not found in the file.")
         print("Please check that your JSONL file contains these keys on every line.")
         return
 
@@ -57,9 +55,7 @@ def convert_jsonl_to_csv(jsonl_path: str, csv_path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--jsonl_path", default="archive/old_results/gemini_predictions.jsonl"
-    )
+    parser.add_argument("--jsonl_path", default="archive/old_results/gemini_predictions.jsonl")
     parser.add_argument("--csv_path", default="results/gemini_predictions.csv")
     args = parser.parse_args()
 

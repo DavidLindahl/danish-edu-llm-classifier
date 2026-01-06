@@ -174,15 +174,11 @@ class SimpleContentFilter:
         df["bad_word_count"] = bad_word_counts
 
         # Split data
-        clean_data = df[~df["is_problematic"]].drop(
-            ["is_problematic", "filter_reason", "bad_word_count"], axis=1
-        )
+        clean_data = df[~df["is_problematic"]].drop(["is_problematic", "filter_reason", "bad_word_count"], axis=1)
 
         problematic_data = df[df["is_problematic"]]
 
-        self.logger.info(
-            f"Filtered {len(df)} samples: {len(clean_data)} clean, {len(problematic_data)} problematic"
-        )
+        self.logger.info(f"Filtered {len(df)} samples: {len(clean_data)} clean, {len(problematic_data)} problematic")
 
         return clean_data, problematic_data
 
@@ -195,9 +191,7 @@ class SimpleContentFilter:
             "total_filtered": len(problematic_data),
             "avg_bad_words": problematic_data["bad_word_count"].mean(),
             "max_bad_words": problematic_data["bad_word_count"].max(),
-            "filter_reasons": problematic_data["filter_reason"]
-            .value_counts()
-            .to_dict(),
+            "filter_reasons": problematic_data["filter_reason"].value_counts().to_dict(),
         }
 
 
@@ -219,9 +213,7 @@ def main():
     print(f"Loaded {len(df)} samples")
 
     # Filter content (adjust threshold as needed: 1=strict, 3=lenient)
-    clean_data, problematic_data = content_filter.filter_dataset(
-        df, text_column="text", bad_word_threshold=2
-    )
+    clean_data, problematic_data = content_filter.filter_dataset(df, text_column="text", bad_word_threshold=2)
 
     # Save results
     os.makedirs("archive/old_results", exist_ok=True)
@@ -230,9 +222,7 @@ def main():
         index=False,
         encoding="utf-8",
     )
-    problematic_data.to_csv(
-        "archive/old_results/problematic_data.csv", index=False, encoding="utf-8"
-    )
+    problematic_data.to_csv("archive/old_results/problematic_data.csv", index=False, encoding="utf-8")
 
     # Print stats
     stats = content_filter.get_stats(problematic_data)
@@ -240,9 +230,7 @@ def main():
     print("\n=== Filtering Results ===")
     print(f"Original: {len(df)} samples")
     print(f"Clean: {len(clean_data)} samples ({len(clean_data) / len(df) * 100:.1f}%)")
-    print(
-        f"Filtered: {len(problematic_data)} samples ({len(problematic_data) / len(df) * 100:.1f}%)"
-    )
+    print(f"Filtered: {len(problematic_data)} samples ({len(problematic_data) / len(df) * 100:.1f}%)")
 
     if len(problematic_data) > 0:
         print(f"\nAverage bad words per filtered sample: {stats['avg_bad_words']:.1f}")

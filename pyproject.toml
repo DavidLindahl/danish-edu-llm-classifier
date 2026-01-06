@@ -14,3 +14,4 @@ dev = [
 
 [tool.ruff]
 lint.select = ["I"]
+line-length=120

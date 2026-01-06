@@ -41,9 +41,7 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
     print(f"\n--- Evaluating Model: {model_path} ---")
 
     # 1. Setup Device, Model, and Tokenizer
-    device = torch.device(
-        device_str if torch.cuda.is_available() and device_str == "cuda" else "cpu"
-    )
+    device = torch.device(device_str if torch.cuda.is_available() and device_str == "cuda" else "cpu")
     model = AutoModelForSequenceClassification.from_pretrained(model_path).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
@@ -52,22 +50,16 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
     test_dataset = Dataset.from_pandas(test_df)
 
     def tokenize_function(examples):
-        return tokenizer(
-            examples["text"], truncation=True, padding="max_length", max_length=512
-        )
+        return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
 
-    tokenized_dataset = test_dataset.map(
-        tokenize_function, batched=True, remove_columns=test_df.columns.tolist()
-    )
+    tokenized_dataset = test_dataset.map(tokenize_function, batched=True, remove_columns=test_df.columns.tolist())
     tokenized_dataset.set_format(type="torch", columns=["input_ids", "attention_mask"])
 
     data_collator = lambda data: {
         "input_ids": torch.stack([s["input_ids"] for s in data]),
         "attention_mask": torch.stack([s["attention_mask"] for s in data]),
     }
-    test_loader = DataLoader(
-        tokenized_dataset, batch_size=batch_size, collate_fn=data_collator
-    )
+    test_loader = DataLoader(tokenized_dataset, batch_size=batch_size, collate_fn=data_collator)
 
     human_std_int = np.array(test_df["int_score"])
     human_std_float = np.array(test_df["float_score"])
@@ -78,11 +70,7 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 
     # 4. Calculate and Display Metrics
     print("\n[Classification Report]")
-    print(
-        classification_report(
-            human_std_int, final_predictions, labels=list(range(5)), zero_division=0
-        )
-    )
+    print(classification_report(human_std_int, final_predictions, labels=list(range(5)), zero_division=0))
 
     # --- ADDED: Display Confusion Matrix ---
     print("[Confusion Matrix]")
@@ -106,12 +94,8 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
         "model_name": model_name,
         "mse": mean_squared_error(human_std_float, raw_predictions),
         "accuracy": accuracy_score(human_std_int, final_predictions),
-        "f1_macro": f1_score(
-            human_std_int, final_predictions, average="macro", zero_division=0
-        ),
-        "f1_weighted": f1_score(
-            human_std_int, final_predictions, average="weighted", zero_division=0
-        ),
+        "f1_macro": f1_score(human_std_int, final_predictions, average="macro", zero_division=0),
+        "f1_weighted": f1_score(human_std_int, final_predictions, average="weighted", zero_division=0),
     }
 
     return result_df, metrics
@@ -143,18 +127,12 @@ if __name__ == "__main__":
     combined_results["real_label"] = test_df["int_score"]
 
     for path in MODEL_PATHS:
-        result_df, metrics = evaluate_single_model(
-            path, TEST_DATA_PATH, DEVICE, BATCH_SIZE
-        )
+        result_df, metrics = evaluate_single_model(path, TEST_DATA_PATH, DEVICE, BATCH_SIZE)
         model_name = os.path.basename(path)
 
         # Add predictions to combined results
-        combined_results[f"predicted_label_{model_name}"] = result_df[
-            f"predicted_label_{model_name}"
-        ]
-        combined_results[f"raw_prediction_{model_name}"] = result_df[
-            f"raw_prediction_{model_name}"
-        ]
+        combined_results[f"predicted_label_{model_name}"] = result_df[f"predicted_label_{model_name}"]
+        combined_results[f"raw_prediction_{model_name}"] = result_df[f"raw_prediction_{model_name}"]
 
         all_metrics.append(metrics)
 
