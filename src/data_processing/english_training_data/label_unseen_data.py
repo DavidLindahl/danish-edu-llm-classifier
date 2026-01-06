@@ -1,10 +1,9 @@
 # Load N samples from the streaming dataset
-from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
-from tqdm import tqdm
 import pandas as pd
-
+import torch
+from datasets import load_dataset
+from tqdm import tqdm
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 N = 10000  # Number of samples to load (change as needed)
 dataset = load_dataset(

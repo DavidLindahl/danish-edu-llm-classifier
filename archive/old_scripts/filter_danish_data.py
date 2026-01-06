@@ -1,8 +1,9 @@
-import pandas as pd
-import re
-import os
-from typing import Tuple
 import logging
+import os
+import re
+from typing import Tuple
+
+import pandas as pd
 
 
 class SimpleContentFilter:

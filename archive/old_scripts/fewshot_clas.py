@@ -1,31 +1,32 @@
 """Training script for the Danish educational score model."""
 
-import sys
 import os
-import numpy as np
+import sys
 import time
+
+import numpy as np
 import pandas as pd
 import torch
+import yaml
+from datasets import ClassLabel, Dataset
 from torch import nn
 from transformers import (
-    AutoTokenizer,
     AutoModelForSequenceClassification,
-    TrainingArguments,
-    Trainer,
+    AutoTokenizer,
     DataCollatorWithPadding,
+    Trainer,
+    TrainingArguments,
 )
+
 import wandb
-from datasets import Dataset, ClassLabel
-import yaml
 
 # path setup to import data processing module
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from data_processing.data_process import get_merged_dataset
-
 # from training.metrics import compute_metrics # Assuming metrics.py is in training/
 # New compute metrics, that supports classification
 from archive.train_clas import compute_metrics
+from data_processing.data_process import get_merged_dataset
 
 from training.utils import set_seed  # Assuming utils.py is in training/
 

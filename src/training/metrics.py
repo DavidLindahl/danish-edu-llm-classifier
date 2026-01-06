@@ -1,6 +1,6 @@
+import evaluate
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error
-import evaluate
 
 
 def compute_metrics(eval_pred):

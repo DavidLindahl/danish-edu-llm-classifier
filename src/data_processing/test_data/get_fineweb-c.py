@@ -5,10 +5,10 @@ A script to download the Danish subset of the Fineweb-C dataset
 and save it as a CSV file.
 """
 
-from datasets import load_dataset
-import numpy as np
-
 import os
+
+import numpy as np
+from datasets import load_dataset
 
 
 def download_danish_fineweb_c(

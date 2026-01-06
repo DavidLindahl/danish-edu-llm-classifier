@@ -1,6 +1,6 @@
 from datatrove.executor import LocalPipelineExecutor
-from datatrove.pipeline.readers import ParquetReader
 from datatrove.pipeline.filters import LambdaFilter
+from datatrove.pipeline.readers import ParquetReader
 from datatrove.pipeline.writers import JsonlWriter
 
 pipeline_exec = LocalPipelineExecutor(

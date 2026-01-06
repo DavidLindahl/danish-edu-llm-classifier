@@ -1,5 +1,6 @@
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import argparse
+
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 def push_model(local_path, repo_id):

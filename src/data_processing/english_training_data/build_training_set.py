@@ -20,7 +20,6 @@ import pandas as pd
 import seaborn as sns
 from datasets import load_dataset
 
-
 HF_DATASET_SCORE_3_NAME = "HuggingFaceFW/fineweb-edu"
 HF_CONFIG_SCORE_3 = "CC-MAIN-2024-22"
 HF_DATASET_SCORE_2_NAME = "HuggingFaceFW/fineweb-edu-score-2"

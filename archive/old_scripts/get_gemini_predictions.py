@@ -1,10 +1,11 @@
+import json
 import os
 import re
-import json
+
 import pandas as pd
-from tqdm import tqdm
 from google import genai
 from google.genai import types
+from tqdm import tqdm
 
 # ------------ paths & parameters ------------
 INPUT_CSV = "src/annotation/data_to_annotate.csv"

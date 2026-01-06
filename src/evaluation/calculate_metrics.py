@@ -1,9 +1,9 @@
-from scipy.stats import bootstrap
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from tqdm import tqdm
 import krippendorff
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from scipy.stats import bootstrap
+from tqdm import tqdm
 
 
 def Squared_diff_list(score_data):  # <-- list of lists

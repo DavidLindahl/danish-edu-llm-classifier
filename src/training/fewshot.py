@@ -1,26 +1,27 @@
 """Training script for the Danish educational score model."""
 
-import sys
 import os
-import numpy as np
+import sys
 import time
-from transformers import (
-    AutoTokenizer,
-    AutoModelForSequenceClassification,
-    TrainingArguments,
-    Trainer,
-    DataCollatorWithPadding,
-)
-import wandb
-from datasets import Dataset
+
+import numpy as np
 import yaml
+from datasets import Dataset
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    DataCollatorWithPadding,
+    Trainer,
+    TrainingArguments,
+)
+
+import wandb
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
+from src.data_processing.dataloader import get_merged_dataset
 from src.training.metrics import compute_metrics
 from src.training.utils import set_seed
-
-from src.data_processing.dataloader import get_merged_dataset
 
 seed_ = 42
 set_seed(seed_)  # Set random seed for reproducibility

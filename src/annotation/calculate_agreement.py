@@ -13,9 +13,10 @@ in your terminal and execute the following command:
 streamlit run src/annotation/calculate_agreement.py
 """
 
-import streamlit as st  # pip install streamlit pandas
-import pandas as pd
 import os
+
+import pandas as pd
+import streamlit as st  # pip install streamlit pandas
 
 # File paths
 folder = ""  # e.g., "intro_code/"

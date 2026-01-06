@@ -1,8 +1,9 @@
+import os
+
 import pandas as pd
 import torch
-from transformers import MarianMTModel, MarianTokenizer
 from tqdm import tqdm
-import os
+from transformers import MarianMTModel, MarianTokenizer
 
 # --- Configuration ---
 MODEL_NAME = "Helsinki-NLP/opus-mt-en-da"

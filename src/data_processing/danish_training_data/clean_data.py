@@ -1,5 +1,6 @@
-import pandas as pd
 import os
+
+import pandas as pd
 
 # --- Configuration ---
 INPUT_CSV_PATH = "data/interim/danish_translate.csv"  # Adjust to your actual input file

@@ -5,20 +5,21 @@ Script for evaluating multiple fine-tuned models with robust error handling for 
 """
 
 import os
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 import torch
-from torch.utils.data import DataLoader
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from datasets import Dataset
 from sklearn.metrics import (
-    mean_squared_error,
     accuracy_score,
-    f1_score,
     classification_report,
     confusion_matrix,
+    f1_score,
+    mean_squared_error,
 )
+from torch.utils.data import DataLoader
 from tqdm import tqdm
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 def run_inference(model, test_loader, device):
