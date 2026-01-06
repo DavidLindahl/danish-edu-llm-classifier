@@ -12,20 +12,22 @@ in your terminal and execute the following command:
 
 streamlit run src/annotation/calculate_agreement.py
 """
+
 import streamlit as st  # pip install streamlit pandas
 import pandas as pd
 import os
-import json
 
 # File paths
 folder = ""  # e.g., "intro_code/"
 RAW_DATA_FILE = "src/annotation/data_to_annotate.csv"
 ANNOTATIONS_FILE = "src/annotation/annotations.json"
 
+
 # Load raw data (CSV stays the same)
 @st.cache_data
 def load_raw_data():
     return pd.read_csv(RAW_DATA_FILE)
+
 
 # Load or create annotation file (JSON now)
 def load_annotations():
@@ -38,11 +40,13 @@ def load_annotations():
     else:
         return pd.DataFrame(columns=["text", "original_label", "our_label"])
 
+
 # Save new annotation (JSON now)
 def save_annotation(new_row):
     df = load_annotations()
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     df.to_json(ANNOTATIONS_FILE, orient="records", indent=2)
+
 
 # Main Streamlit app
 def main():
@@ -74,20 +78,24 @@ def main():
     # st.markdown(f"**Original Label:** `{original_label}`")
 
     # Annotation options
-    label = st.radio("Select educational quality level:", ['None', 'Minimal',
-        'Basic', 'Good', 'Excellent',
-        '❗ Problematic Content ❗'
-    ], key="label_radio")
+    label = st.radio(
+        "Select educational quality level:",
+        ["None", "Minimal", "Basic", "Good", "Excellent", "❗ Problematic Content ❗"],
+        key="label_radio",
+    )
 
     if st.button("Submit annotation"):
-        save_annotation({
-            "id": sample["id"],
-            "text": sample["text"],
-            "original_label": original_label,
-            "our_label": label
-        })
+        save_annotation(
+            {
+                "id": sample["id"],
+                "text": sample["text"],
+                "original_label": original_label,
+                "our_label": label,
+            }
+        )
         st.success("✅ Annotation saved. Reloading next example...")
         st.rerun()  # updated method for rerun
+
 
 if __name__ == "__main__":
     main()

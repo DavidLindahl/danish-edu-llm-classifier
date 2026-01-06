@@ -3,7 +3,7 @@ test_all_models.py
 
 Script for evaluating multiple fine-tuned models and saving predictions for analysis.
 """
-import argparse
+
 import os
 import pandas as pd
 import numpy as np
@@ -27,8 +27,8 @@ def run_inference(model, test_loader, device):
     all_raw_preds = []
     with torch.no_grad():
         for batch in tqdm(test_loader, desc="Inference", leave=False):
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             raw_preds = outputs.logits.squeeze(-1).cpu().numpy()
             all_raw_preds.extend(raw_preds)
@@ -38,28 +38,38 @@ def run_inference(model, test_loader, device):
 def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
     """Loads a single model, evaluates it, and returns predictions with test data."""
     print(f"\n--- Evaluating Model: {model_path} ---")
-    
+
     # 1. Setup Device, Model, and Tokenizer
-    device = torch.device(device_str if torch.cuda.is_available() and device_str == 'cuda' else 'cpu')
+    device = torch.device(
+        device_str if torch.cuda.is_available() and device_str == "cuda" else "cpu"
+    )
     model = AutoModelForSequenceClassification.from_pretrained(model_path).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     # 2. Load and Prepare Test Data
     test_df = pd.read_csv(test_data_path)
     test_dataset = Dataset.from_pandas(test_df)
-    
-    def tokenize_function(examples):
-        return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
 
-    tokenized_dataset = test_dataset.map(tokenize_function, batched=True, remove_columns=test_df.columns.tolist())
-    tokenized_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask'])
-    
-    data_collator = lambda data: {'input_ids': torch.stack([s['input_ids'] for s in data]),
-                                  'attention_mask': torch.stack([s['attention_mask'] for s in data])}
-    test_loader = DataLoader(tokenized_dataset, batch_size=batch_size, collate_fn=data_collator)
-    
-    human_std_int = np.array(test_df['int_score'])
-    human_std_float = np.array(test_df['float_score'])
+    def tokenize_function(examples):
+        return tokenizer(
+            examples["text"], truncation=True, padding="max_length", max_length=512
+        )
+
+    tokenized_dataset = test_dataset.map(
+        tokenize_function, batched=True, remove_columns=test_df.columns.tolist()
+    )
+    tokenized_dataset.set_format(type="torch", columns=["input_ids", "attention_mask"])
+
+    data_collator = lambda data: {
+        "input_ids": torch.stack([s["input_ids"] for s in data]),
+        "attention_mask": torch.stack([s["attention_mask"] for s in data]),
+    }
+    test_loader = DataLoader(
+        tokenized_dataset, batch_size=batch_size, collate_fn=data_collator
+    )
+
+    human_std_int = np.array(test_df["int_score"])
+    human_std_float = np.array(test_df["float_score"])
 
     # 3. Run Inference and Process Predictions
     raw_predictions = run_inference(model, test_loader, device)
@@ -67,8 +77,12 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 
     # 4. Calculate and Display Metrics
     print("\n[Classification Report]")
-    print(classification_report(human_std_int, final_predictions, labels=list(range(5)), zero_division=0))
-    
+    print(
+        classification_report(
+            human_std_int, final_predictions, labels=list(range(5)), zero_division=0
+        )
+    )
+
     # --- ADDED: Display Confusion Matrix ---
     print("[Confusion Matrix]")
     labels = list(range(5))
@@ -81,20 +95,24 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
 
     # 5. Create DataFrame with test data and predictions
     model_name = os.path.basename(model_path)
-    result_df = test_df[['id', 'text', 'int_score']].copy()
-    result_df['real_label'] = human_std_int
-    result_df[f'predicted_label_{model_name}'] = final_predictions
-    result_df[f'raw_prediction_{model_name}'] = raw_predictions
-    
+    result_df = test_df[["id", "text", "int_score"]].copy()
+    result_df["real_label"] = human_std_int
+    result_df[f"predicted_label_{model_name}"] = final_predictions
+    result_df[f"raw_prediction_{model_name}"] = raw_predictions
+
     # 6. Calculate summary metrics
     metrics = {
         "model_name": model_name,
         "mse": mean_squared_error(human_std_float, raw_predictions),
         "accuracy": accuracy_score(human_std_int, final_predictions),
-        "f1_macro": f1_score(human_std_int, final_predictions, average='macro', zero_division=0),
-        "f1_weighted": f1_score(human_std_int, final_predictions, average='weighted', zero_division=0)
+        "f1_macro": f1_score(
+            human_std_int, final_predictions, average="macro", zero_division=0
+        ),
+        "f1_weighted": f1_score(
+            human_std_int, final_predictions, average="weighted", zero_division=0
+        ),
     }
-    
+
     return result_df, metrics
 
 
@@ -107,7 +125,7 @@ if __name__ == "__main__":
         "Davidozito/fewshot-1000-samples",
         "Davidozito/fewshot-2500-samples",
     ]
-        
+
     TEST_DATA_PATH = "src/annotation/test_final.csv"
     OUTPUT_CSV_PATH = "results/test_results_with_predictions.csv"
     METRICS_CSV_PATH = "results/test_metrics_summary.csv"
@@ -117,36 +135,42 @@ if __name__ == "__main__":
     # --- Main Loop ---
     all_results = []
     all_metrics = []
-    
+
     # Load test data once to create the base DataFrame
     test_df = pd.read_csv(TEST_DATA_PATH)
-    combined_results = test_df[['id', 'text', 'int_score']].copy()
-    combined_results['real_label'] = test_df['int_score']
-    
-    for path in MODEL_PATHS:    
-        result_df, metrics = evaluate_single_model(path, TEST_DATA_PATH, DEVICE, BATCH_SIZE)
+    combined_results = test_df[["id", "text", "int_score"]].copy()
+    combined_results["real_label"] = test_df["int_score"]
+
+    for path in MODEL_PATHS:
+        result_df, metrics = evaluate_single_model(
+            path, TEST_DATA_PATH, DEVICE, BATCH_SIZE
+        )
         model_name = os.path.basename(path)
-        
+
         # Add predictions to combined results
-        combined_results[f'predicted_label_{model_name}'] = result_df[f'predicted_label_{model_name}']
-        combined_results[f'raw_prediction_{model_name}'] = result_df[f'raw_prediction_{model_name}']
-        
+        combined_results[f"predicted_label_{model_name}"] = result_df[
+            f"predicted_label_{model_name}"
+        ]
+        combined_results[f"raw_prediction_{model_name}"] = result_df[
+            f"raw_prediction_{model_name}"
+        ]
+
         all_metrics.append(metrics)
 
     # --- Save Results ---
     if not all_metrics:
         print("No models were evaluated. Exiting.")
         exit()
-    
+
     # Create output directory if it doesn't exist
     output_dir = os.path.dirname(OUTPUT_CSV_PATH)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
+
     # Save combined predictions
     combined_results.to_csv(OUTPUT_CSV_PATH, index=False)
     print(f"\n✅ Predictions successfully saved to: {OUTPUT_CSV_PATH}")
-    
+
     # Save metrics summary
     metrics_df = pd.DataFrame(all_metrics)
     metrics_df.to_csv(METRICS_CSV_PATH, index=False)
@@ -154,7 +178,7 @@ if __name__ == "__main__":
 
     print("\n\n--- 📊 Summary of All Model Results ---")
     print(metrics_df.to_string())
-    
-    print(f"\n--- 📋 Preview of Combined Results ---")
+
+    print("\n--- 📋 Preview of Combined Results ---")
     print(f"Shape: {combined_results.shape}")
     print(combined_results.head())

@@ -12,3 +12,4 @@ wandb/
 *.sh
 models/
 trainer_output/
+.python-version

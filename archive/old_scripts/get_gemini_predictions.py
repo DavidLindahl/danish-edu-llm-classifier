@@ -1,12 +1,15 @@
-import os, re, json, pandas as pd
+import os
+import re
+import json
+import pandas as pd
 from tqdm import tqdm
 from google import genai
 from google.genai import types
 
 # ------------ paths & parameters ------------
-INPUT_CSV  = "src/annotation/data_to_annotate.csv"
+INPUT_CSV = "src/annotation/data_to_annotate.csv"
 OUTPUT_JSONL = "results/gemini_predictions.jsonl"
-MODEL      = "gemini-2.5-flash"
+MODEL = "gemini-2.5-flash"
 # --- Prompt (no changes needed) ---
 PROMPT_TEMPLATE = """Below is an extract from a web page. Evaluate whether the page has a high educational value and could be useful in an educational setting for teaching from primary school to grade school levels using the additive 5-point scoring system described below. Points are accumulated based on the satisfaction of each criterion:
 - Add 1 point if the extract provides some basic information relevant to educational topics, even if it includes some irrelevant or non-academic content like advertisements and promotional material.
@@ -22,6 +25,7 @@ After examining the extract:
 - Briefly justify your total score, up to 100 words.
 - Conclude with the score using the format: "Educational score: <total points>"
 """
+
 
 # ------------ helper ------------
 def score_extract(text: str, client, cfg) -> int:
@@ -39,6 +43,7 @@ def score_extract(text: str, client, cfg) -> int:
     except Exception as e:
         print("API error:", e)
         return -1
+
 
 # ------------ main ------------
 if __name__ == "__main__":

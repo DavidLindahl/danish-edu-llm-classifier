@@ -63,9 +63,7 @@ def _load_hf_samples(
         with ``None``.
     """
 
-    print(
-        f"Streaming {num_samples} samples from {dataset_name} ({config_name}) ..."
-    )
+    print(f"Streaming {num_samples} samples from {dataset_name} ({config_name}) ...")
     try:
         stream = load_dataset(
             dataset_name,
@@ -135,7 +133,7 @@ def plot_score_distribution(df: pd.DataFrame) -> None:
 
     plt.figure(figsize=(8, 5))
     # Count occurrences for each int_score 0-5
-    value_counts = df['int_score'].value_counts().reindex(range(0, 6), fill_value=0)
+    value_counts = df["int_score"].value_counts().reindex(range(0, 6), fill_value=0)
     sns.barplot(x=value_counts.index, y=value_counts.values, palette="viridis")
     plt.xlabel("int_score")
     plt.ylabel("count")
@@ -153,7 +151,9 @@ def save_to_csv(df: pd.DataFrame, filename: str = OUTPUT_CSV_PATH) -> None:
     print(f"Saved merged dataset to {filename}")
 
 
-def limit_int_score_1_2_3(df: pd.DataFrame, N_0: int,  N_1: int, N_2: int, N_3: int, N_4: int) -> pd.DataFrame:
+def limit_int_score_1_2_3(
+    df: pd.DataFrame, N_0: int, N_1: int, N_2: int, N_3: int, N_4: int
+) -> pd.DataFrame:
     """
     Limit the number of samples with int_score == 1, 2, and 3 to N_1, N_2, and N_3 respectively.
     All other int_score classes (0, 4, 5) are unchanged.
@@ -186,23 +186,23 @@ def limit_int_score_1_2_3(df: pd.DataFrame, N_0: int,  N_1: int, N_2: int, N_3: 
 
 def convert_int_score_5_to_4(df: pd.DataFrame) -> pd.DataFrame:
     """Convert all int_score 5 to 4 in the DataFrame."""
-    df.loc[df['int_score'] == 5, 'int_score'] = 4
+    df.loc[df["int_score"] == 5, "int_score"] = 4
     return df
 
+
 if __name__ == "__main__":
-    num_samples_score_3 =  8_000
+    num_samples_score_3 = 8_000
     num_samples_score_2 = 2_500
     num_samples_csv = 10_000
 
     merged_df = load_and_process_dataset(
         num_samples_score_3=num_samples_score_3,
         num_samples_score_2=num_samples_score_2,
-        num_samples_csv=num_samples_csv
+        num_samples_csv=num_samples_csv,
     )
     # Limit int_score 1, 2, and 3 to 1000 samples each
-    merged_df = limit_int_score_1_2_3(merged_df, N_0=1000, N_1=1000, N_2=1000, N_3=1000, N_4=1000)
+    merged_df = limit_int_score_1_2_3(
+        merged_df, N_0=1000, N_1=1000, N_2=1000, N_3=1000, N_4=1000
+    )
     plot_score_distribution(merged_df)
     save_to_csv(merged_df)
-
-
-

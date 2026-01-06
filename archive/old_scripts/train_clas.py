@@ -1,4 +1,5 @@
 """Training script for the Danish educational score model."""
+
 import sys
 import os
 import numpy as np
@@ -23,7 +24,6 @@ from src.data_processing.dataloader import get_merged_dataset
 # New compute metrics for classificaiton
 # training/metrics.py
 
-import numpy as np
 import evaluate
 
 # Load the evaluation metrics
@@ -32,7 +32,10 @@ accuracy_metric = evaluate.load("accuracy")
 precision_metric = evaluate.load("precision")
 recall_metric = evaluate.load("recall")
 f1_metric = evaluate.load("f1")
-mse_metric = evaluate.load("mse") # Keep if you still want to calculate MSE, see notes below
+mse_metric = evaluate.load(
+    "mse"
+)  # Keep if you still want to calculate MSE, see notes below
+
 
 def compute_metrics(eval_pred):
     # eval_pred is an EvalPrediction object from Hugging Face Trainer
@@ -45,17 +48,27 @@ def compute_metrics(eval_pred):
     # --------------------------------------------------------
 
     # Calculate metrics using the predicted_class_ids
-    accuracy = accuracy_metric.compute(predictions=predictions_class_ids, references=labels)["accuracy"]
+    accuracy = accuracy_metric.compute(
+        predictions=predictions_class_ids, references=labels
+    )["accuracy"]
 
     # For precision, recall, and f1-score in multi-class problems,
     # it's crucial to specify an 'average' method (e.g., 'macro' or 'weighted').
     # 'macro' treats all classes equally.
     # 'weighted' accounts for class imbalance.
     # You can return both if needed.
-    precision_macro = precision_metric.compute(predictions=predictions_class_ids, references=labels, average="macro")["precision"]
-    recall_macro = recall_metric.compute(predictions=predictions_class_ids, references=labels, average="macro")["recall"]
-    f1_macro = f1_metric.compute(predictions=predictions_class_ids, references=labels, average="macro")["f1"]
-    f1_weighted = f1_metric.compute(predictions=predictions_class_ids, references=labels, average="weighted")["f1"]
+    precision_macro = precision_metric.compute(
+        predictions=predictions_class_ids, references=labels, average="macro"
+    )["precision"]
+    recall_macro = recall_metric.compute(
+        predictions=predictions_class_ids, references=labels, average="macro"
+    )["recall"]
+    f1_macro = f1_metric.compute(
+        predictions=predictions_class_ids, references=labels, average="macro"
+    )["f1"]
+    f1_weighted = f1_metric.compute(
+        predictions=predictions_class_ids, references=labels, average="weighted"
+    )["f1"]
 
     # --- IMPORTANT NOTE ON MSE ---
     # If your model is a classification model outputting logits (5 values),
@@ -73,10 +86,11 @@ def compute_metrics(eval_pred):
         "accuracy": accuracy,
         "f1_macro": f1_macro,
         "f1_weighted": f1_weighted,
-        "precision_macro": precision_macro, # Optional: include if you need it
-        "recall_macro": recall_macro,       # Optional: include if you need it
+        "precision_macro": precision_macro,  # Optional: include if you need it
+        "recall_macro": recall_macro,  # Optional: include if you need it
         # "mse": mse # Include if you want MSE on predicted class IDs
     }
+
 
 def load_config(config_path):
     """Load configuration from YAML file."""
@@ -89,17 +103,30 @@ def preprocess(examples, tokenizer):
     """Preprocess examples for CLASSIFICATION."""
     batch = tokenizer(examples["text"], truncation=True)
     # Ensure labels are integers for CrossEntropyLoss
-    batch["labels"] = np.int64(examples["score"]) 
+    batch["labels"] = np.int64(examples["score"])
     return batch
 
 
-def main(val_split, model_name, model_dir, num_danish_samples, 
-         num_english_samples, learning_rate, num_train_epochs, 
-         per_device_train_batch_size, per_device_eval_batch_size, 
-         evaluation_strategy, eval_steps, save_strategy, config):
+def main(
+    val_split,
+    model_name,
+    model_dir,
+    num_danish_samples,
+    num_english_samples,
+    learning_rate,
+    num_train_epochs,
+    per_device_train_batch_size,
+    per_device_eval_batch_size,
+    evaluation_strategy,
+    eval_steps,
+    save_strategy,
+    config,
+):
     """Main training function that handles the entire training pipeline."""
-    
-    print(f"Loading {num_english_samples} English and {num_danish_samples} Danish samples...")
+
+    print(
+        f"Loading {num_english_samples} English and {num_danish_samples} Danish samples..."
+    )
     df = get_merged_dataset(
         english_data_amount=num_english_samples,
         danish_data_amount=num_danish_samples,
@@ -111,25 +138,25 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         lambda x: {"score": int(np.clip(round(float(x["int_score"])), 0, 4))}
     )
     dataset = dataset.cast_column("score", ClassLabel(names=[str(i) for i in range(5)]))
-    
+
     # Split dataset FIRST to calculate weights ONLY on the training set
     dataset = dataset.train_test_split(
         train_size=1 - val_split, seed=42, stratify_by_column="score"
     )
-    
+
     train_dataset = dataset["train"]
     val_dataset = dataset["test"]
 
     # --- 1. Calculate Class Weights for CDW-CE Loss ---
     print("Calculating class weights for CDW-CE loss...")
-    class_counts = pd.Series(train_dataset['score']).value_counts().sort_index()
+    class_counts = pd.Series(train_dataset["score"]).value_counts().sort_index()
     # Inverse frequency weighting
     class_weights = (class_counts.sum() / (len(class_counts) * class_counts)).tolist()
     print(f"Calculated Class Weights: {class_weights}")
 
     # --- 2. Set up Training Arguments (needed for device info) ---
     timestamp = time.strftime("%m.%d-%H.%M")
-    output_dir = f'./results/{timestamp}'
+    output_dir = f"./results/{timestamp}"
     training_args = TrainingArguments(
         output_dir=output_dir,
         eval_strategy=evaluation_strategy,
@@ -179,15 +206,19 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
 
     # Process datasets
-    train_dataset = train_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
-    val_dataset = val_dataset.map(lambda examples: preprocess(examples, tokenizer), batched=True)
+    train_dataset = train_dataset.map(
+        lambda examples: preprocess(examples, tokenizer), batched=True
+    )
+    val_dataset = val_dataset.map(
+        lambda examples: preprocess(examples, tokenizer), batched=True
+    )
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     print("Freezing base model parameters...")
     for param in model.base_model.parameters():
         param.requires_grad = False
     print("Base model parameters frozen.")
-    
+
     # --- 5. Initialize the standard Trainer with the custom loss function ---
     print("Initializing Trainer with custom CDW-CE loss function...")
     trainer = Trainer(
@@ -195,10 +226,10 @@ def main(val_split, model_name, model_dir, num_danish_samples,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
-        tokenizer=tokenizer, 
-        data_collator=data_collator, 
+        tokenizer=tokenizer,
+        data_collator=data_collator,
         compute_metrics=compute_metrics,
-        compute_loss_func=cdw_ce_loss_func, # Pass the custom function here
+        compute_loss_func=cdw_ce_loss_func,  # Pass the custom function here
     )
 
     print("Configuration:")
@@ -223,11 +254,13 @@ def main(val_split, model_name, model_dir, num_danish_samples,
     os.makedirs(final_model_save_path, exist_ok=True)
     trainer.save_model(final_model_save_path)
     tokenizer.save_pretrained(final_model_save_path)
-    trainer.state.save_to_json(os.path.join(final_model_save_path, "trainer_state.json"))
-    
+    trainer.state.save_to_json(
+        os.path.join(final_model_save_path, "trainer_state.json")
+    )
+
     print("Training and evaluation complete.")
     print("Done.")
-    
+
     return trainer, eval_metrics
 
 
@@ -235,9 +268,9 @@ if __name__ == "__main__":
     config_path = "src/training/config/base.yaml"
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
-    
+
     config = load_config(config_path)
-    
+
     val_split = config.get("val_split", 0.1)
     model_name = config["model_name"]
     model_dir = config["model_dir"]
@@ -250,11 +283,19 @@ if __name__ == "__main__":
     evaluation_strategy = config.get("evaluation_strategy", "steps")
     save_strategy = config.get("save_strategy", "steps")
     eval_steps = config.get("eval_steps", 50)
-    
+
     main(
-        val_split, model_name, model_dir, num_danish_samples,
-        num_english_samples, learning_rate, num_train_epochs,
-        per_device_train_batch_size, per_device_eval_batch_size,
-        evaluation_strategy, eval_steps, save_strategy,
-        config
+        val_split,
+        model_name,
+        model_dir,
+        num_danish_samples,
+        num_english_samples,
+        learning_rate,
+        num_train_epochs,
+        per_device_train_batch_size,
+        per_device_eval_batch_size,
+        evaluation_strategy,
+        eval_steps,
+        save_strategy,
+        config,
     )

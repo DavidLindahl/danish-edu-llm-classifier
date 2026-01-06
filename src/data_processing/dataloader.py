@@ -1,5 +1,5 @@
 import pandas as pd
-import json
+
 
 def get_merged_dataset(
     english_data_amount=1000,
@@ -21,9 +21,11 @@ def get_merged_dataset(
     dataframes = []
 
     if english_data_amount != 0:
-        df = pd.read_csv(english_path) # if -1 then load all
-        if english_data_amount > 0: 
-            df = df.sample(n=min(english_data_amount, len(df)), random_state=random_seed) # sample english_data_amount if positive
+        df = pd.read_csv(english_path)  # if -1 then load all
+        if english_data_amount > 0:
+            df = df.sample(
+                n=min(english_data_amount, len(df)), random_state=random_seed
+            )  # sample english_data_amount if positive
         dataframes.append(df)
 
     if danish_data_amount != 0:
@@ -31,7 +33,6 @@ def get_merged_dataset(
         if danish_data_amount > 0:
             df = df.sample(n=min(danish_data_amount, len(df)), random_state=random_seed)
         dataframes.append(df)
-  
 
     return pd.concat(dataframes, ignore_index=True)
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         english_data_amount=1000,
         danish_data_amount=500,
         english_path="data/processed/english_fineweb_merged_data.csv",
-        danish_path="data/processed/danish_train.csv"
+        danish_path="data/processed/danish_train.csv",
     )
     print(f"Merged dataset contains {len(merged_df)} samples.")
     print(merged_df.head())
