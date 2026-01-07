@@ -101,33 +101,45 @@ def evaluate_single_model(model_path, test_data_path, device_str, batch_size):
     return result_df, metrics
 
 
-if __name__ == "__main__":
-    # --- Configuration ---
-    MODEL_PATHS = [
-        "Davidozito/zeroshot",
-        "Davidozito/Full-finetune",
-        "Davidozito/fewshot-250-samples",
-        "Davidozito/fewshot-1000-samples",
-        "Davidozito/fewshot-2500-samples",
-    ]
+def main(
+    model_paths=None,
+    test_data_path="src/annotation/test_final.csv",
+    output_csv_path="results/test_results_with_predictions.csv",
+    metrics_csv_path="results/test_metrics_summary.csv",
+    device="cpu",
+    batch_size=32,
+):
+    """Main evaluation function that evaluates multiple models.
 
-    TEST_DATA_PATH = "src/annotation/test_final.csv"
-    OUTPUT_CSV_PATH = "results/test_results_with_predictions.csv"
-    METRICS_CSV_PATH = "results/test_metrics_summary.csv"
-    DEVICE = "cpu"
-    BATCH_SIZE = 32
+    Args:
+        model_paths: List of model paths to evaluate. If None, uses default list.
+        test_data_path: Path to test data CSV file.
+        output_csv_path: Path to save combined predictions.
+        metrics_csv_path: Path to save metrics summary.
+        device: Device to use for evaluation ("cpu", "cuda", or "mps").
+        batch_size: Batch size for evaluation.
+    """
+    # Default model paths if not provided
+    if model_paths is None:
+        model_paths = [
+            "Davidozito/zeroshot",
+            "Davidozito/Full-finetune",
+            "Davidozito/fewshot-250-samples",
+            "Davidozito/fewshot-1000-samples",
+            "Davidozito/fewshot-2500-samples",
+        ]
 
     # --- Main Loop ---
     all_results = []
     all_metrics = []
 
     # Load test data once to create the base DataFrame
-    test_df = pd.read_csv(TEST_DATA_PATH)
+    test_df = pd.read_csv(test_data_path)
     combined_results = test_df[["id", "text", "int_score"]].copy()
     combined_results["real_label"] = test_df["int_score"]
 
-    for path in MODEL_PATHS:
-        result_df, metrics = evaluate_single_model(path, TEST_DATA_PATH, DEVICE, BATCH_SIZE)
+    for path in model_paths:
+        result_df, metrics = evaluate_single_model(path, test_data_path, device, batch_size)
         model_name = os.path.basename(path)
 
         # Add predictions to combined results
@@ -139,21 +151,21 @@ if __name__ == "__main__":
     # --- Save Results ---
     if not all_metrics:
         print("No models were evaluated. Exiting.")
-        exit()
+        return
 
     # Create output directory if it doesn't exist
-    output_dir = os.path.dirname(OUTPUT_CSV_PATH)
+    output_dir = os.path.dirname(output_csv_path)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     # Save combined predictions
-    combined_results.to_csv(OUTPUT_CSV_PATH, index=False)
-    print(f"\n✅ Predictions successfully saved to: {OUTPUT_CSV_PATH}")
+    combined_results.to_csv(output_csv_path, index=False)
+    print(f"\n✅ Predictions successfully saved to: {output_csv_path}")
 
     # Save metrics summary
     metrics_df = pd.DataFrame(all_metrics)
-    metrics_df.to_csv(METRICS_CSV_PATH, index=False)
-    print(f"✅ Metrics summary saved to: {METRICS_CSV_PATH}")
+    metrics_df.to_csv(metrics_csv_path, index=False)
+    print(f"✅ Metrics summary saved to: {metrics_csv_path}")
 
     print("\n\n--- 📊 Summary of All Model Results ---")
     print(metrics_df.to_string())
@@ -161,3 +173,9 @@ if __name__ == "__main__":
     print("\n--- 📋 Preview of Combined Results ---")
     print(f"Shape: {combined_results.shape}")
     print(combined_results.head())
+
+    return combined_results, metrics_df
+
+
+if __name__ == "__main__":
+    main()

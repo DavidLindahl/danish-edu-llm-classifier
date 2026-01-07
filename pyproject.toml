@@ -40,6 +40,7 @@ line-length = 120
 [project.scripts]
 classifier = "main:main"
 train = "src.training.train:main"
+evaluate = "src.evaluation.test:main"
 
 
 [tool.hatch.build.targets.wheel]
