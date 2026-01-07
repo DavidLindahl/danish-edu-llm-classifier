@@ -42,23 +42,38 @@ def preprocess(examples, tokenizer):
 
 
 def main(
-    val_split,
-    model_name,
-    model_dir,
-    num_danish_samples,
-    num_english_samples,
-    learning_rate,
-    num_train_epochs,
-    per_device_train_batch_size,
-    per_device_eval_batch_size,
-    evaluation_strategy,
-    eval_steps,
-    save_strategy,
-    config,
+    val_split=0.1,
+    model_name="FacebookAI/xlm-roberta-base",
+    model_dir="models",
+    num_danish_samples=0,
+    num_english_samples=5000,
+    learning_rate=3e-4,
+    num_train_epochs=5,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=32,
+    evaluation_strategy="steps",
+    eval_steps=50,
+    save_strategy="steps",
+    config=None,
 ):
     """Main training function that handles the entire training pipeline."""
-    # All config parameters are now passed directly as arguments
-
+    # If config is not provided, create a dict from the parameters
+    if config is None:
+        config = {
+            "val_split": val_split,
+            "model_name": model_name,
+            "model_dir": model_dir,
+            "num_danish_samples": num_danish_samples,
+            "num_english_samples": num_english_samples,
+            "learning_rate": learning_rate,
+            "num_train_epochs": num_train_epochs,
+            "per_device_train_batch_size": per_device_train_batch_size,
+            "per_device_eval_batch_size": per_device_eval_batch_size,
+            "evaluation_strategy": evaluation_strategy,
+            "eval_steps": eval_steps,
+            "save_strategy": save_strategy,
+        }
+    
     # Load data
     print(f"Loading {num_english_samples} English and {num_danish_samples} Danish samples...")
     df = get_merged_dataset(
